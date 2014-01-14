@@ -40,8 +40,9 @@ tokenlist_t insert_at_end (tokenlist_t tail, char *data) {
 tokenlist_t read_pipe (tokenlist_t tail) {
   printf("entering | case\n");
   char *token = "|";
-  tail = insert_at_end(tail, token);
-  return tail;
+  tokenlist_t tmp = (tokenlist_t)malloc(sizeof(struct token_list));
+  tmp = insert_at_end(tail, token);
+  return tmp;
 }
 
 // input: tail of a linked list, character stream
@@ -50,16 +51,17 @@ tokenlist_t read_ampersand (tokenlist_t tail, void *stream) {
   printf("entering && case\n");
   int c;
   c = getc(stream);
+  tokenlist_t tmp = (tokenlist_t)malloc(sizeof(struct token_list));
   if (c == '&') {
     char *token = "&&";
-    tail = insert_at_end(tail, token);
+    tmp = insert_at_end(tail, token);
   } else {
     // push the char back onto the stream
     ungetc(c, stream);
     char *token = "&";
-    tail = insert_at_end(tail, token);
+    tmp = insert_at_end(tail, token);
   }
-  return tail;
+  return tmp;
 }
 
 // inputs: tail of a linked list, character stream
@@ -94,40 +96,12 @@ struct command_stream
 
 command_stream_t
 make_command_stream (int (*get_next_byte) (void *),
-		     void *get_next_byte_argument)
+         void *get_next_byte_argument)
 {
   /* FIXME: Replace this with your implementation.  You may need to
      add auxiliary functions and otherwise modify the source code.
      You can also use external functions defined in the GNU C Library.  */
 
-  /*
-  // Determining the size of the string
-  struct stat st;
-  int statcheck = stat(get_next_byte_argument, &st);
-  // printf("Stat status is %d\n", statcheck);
-  if (!statcheck) {
-    perror("");
-  }
-  unsigned size = st.st_size;
-  printf("Size of fullstring is %u\n", size);
-
-  // Stringbuilder
-  char* fullstring; 
-  char nextchar[2]; // converting the int to a null-terminated string
-  fullstring = (char *) malloc(sizeof(char) * (size + 2));
-
-  while(c != EOF) {
-    c = get_next_byte(get_next_byte_argument);
-    if (c != EOF) {
-      memset(nextchar, '\0', sizeof(nextchar));
-      memset(nextchar, c, 1);
-      strcat(fullstring, nextchar);
-    }
-  }
-
-  // prints out the full string
-  printf("%s\n", fullstring);
-  */
   tokenlist_t tokenlist_head = (tokenlist_t)malloc(sizeof(struct token_list));
   tokenlist_t tokenlist_end = tokenlist_head;
 
