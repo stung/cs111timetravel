@@ -32,15 +32,16 @@ tokenlist_t insert_at_end (tokenlist_t oldtail, char *data) {
   if (oldtail != NULL)
     oldtail->next_token = newtail;
   newtail->next_token = NULL;
+  printf("Data inserted was %s\n", newtail->token);
   return newtail;
 }
 
 // input: tail of a linked list, special character
 // output: tail of a linked list
 tokenlist_t read_singlespecial (tokenlist_t tail, int c) {
-  char token[5];
+  char token[2];
+  memset(token, '\0', sizeof(token));
   sprintf(token, "%c", c);
-  printf("entering %s case\n", token);
   tokenlist_t tmp = (tokenlist_t)malloc(sizeof(struct token_list));
   tmp = insert_at_end(tail, token);
   return tmp;
@@ -53,12 +54,10 @@ tokenlist_t read_ampersand (tokenlist_t tail, void *stream) {
   c = getc(stream);
   tokenlist_t tmp = (tokenlist_t)malloc(sizeof(struct token_list));
   if (c == '&') {
-    printf("entering && case\n");
     char *token = "&&";
     tmp = insert_at_end(tail, token);
   } else {
     // push the char back onto the stream
-    printf("entering & case\n");
     ungetc(c, stream);
     char *token = "&";
     tmp = insert_at_end(tail, token);
@@ -73,12 +72,10 @@ tokenlist_t read_pipe (tokenlist_t tail, void *stream) {
   c = getc(stream);
   tokenlist_t tmp = (tokenlist_t)malloc(sizeof(struct token_list));
   if (c == '|') {
-    printf("entering || case\n");
     char *token = "||";
     tmp = insert_at_end(tail, token);
   } else {
     // push the char back onto the stream
-    printf("entering | case\n");
     ungetc(c, stream);
     char *token = "|";
     tmp = insert_at_end(tail, token);
@@ -99,8 +96,8 @@ tokenlist_t read_newline (tokenlist_t tail) {
 // input: tail of a linked list, character stream, read character
 // output: tail of a linked list
 tokenlist_t read_word (tokenlist_t tail, void *stream, int c) {
-  printf("entering word case\n");
-  if (c == ' ' || c == '\t') {
+  // printf("entering word case\n");
+  /* if (c == ' ' || c == '\t') {
     // printf("finish this simple word\n");
     return tail;
   } else if (c == '\n') {
@@ -108,36 +105,39 @@ tokenlist_t read_word (tokenlist_t tail, void *stream, int c) {
     ungetc(c, stream);
     return tail;
   } else {
-    char newtoken[100]; //FIXME: CANNOT BE STATIC
-    memset(newtoken, '\0', 100);
-    tokenlist_t tmp = (tokenlist_t)malloc(sizeof(struct token_list));
+    */
+  char newtoken[100]; //FIXME: CANNOT BE STATIC
+  memset(newtoken, '\0', sizeof(newtoken));
+  tokenlist_t tmp = (tokenlist_t)malloc(sizeof(struct token_list));
 
-    char appendchar[2];
-    memset(appendchar, '\0', sizeof(appendchar));
-    sprintf(appendchar, "%c", c);
-    strcat(newtoken, appendchar);
+  char appendchar[2];
+  memset(appendchar, '\0', sizeof(appendchar));
+  sprintf(appendchar, "%c", c);
+  strcat(newtoken, appendchar);
 
-    int nextchar;
-    nextchar = getc(stream);
-    while (nextchar != EOF) {
-      if (nextchar == ' ' || nextchar == '\t') {
-        // printf("finishing simple word\n");
-        break;
-      } else if (nextchar == '\n') {
-        // printf("storing a newline\n");
-        ungetc(c, stream);
-        break;
-      } else {
-        sprintf(appendchar, "%c", nextchar);
-        strcat(newtoken, appendchar);
-        nextchar = getc(stream);
-      }
+  int nextchar;
+  nextchar = getc(stream);
+  char newlineTerm = 0;
+  while (nextchar != EOF) {
+    if (nextchar == ' ' || nextchar == '\t') {
+      break;
+    } else if (nextchar == '\n') {
+      // printf("storing a newline\n");
+      //ungetc(c, stream);
+      newlineTerm = 1;
+      break;
+    } else {
+      sprintf(appendchar, "%c", nextchar);
+      strcat(newtoken, appendchar);
+      nextchar = getc(stream);
     }
-    tmp = insert_at_end(tail, newtoken); 
-    printf("Storing %s\n", newtoken);
-    //free(newtoken);
-    return tmp;
   }
+  tmp = insert_at_end(tail, newtoken); 
+  // printf("Storing %s\n", newtoken);
+  //free(newtoken);
+  if (newlineTerm)
+    return read_newline(tmp);
+  return tmp;
 }
 
 struct command_list
@@ -195,13 +195,19 @@ make_command_stream (int (*get_next_byte) (void *),
       case '\n':
         tokenlist_end = read_newline(tokenlist_end);
         break;
+      case ' ':
+        break;
+      case '\t':
+        break;
       default:
         tokenlist_end = read_word(tokenlist_end, get_next_byte_argument, c);
         break;
     };
   }
 
+  printf("Finished tokenizing");
   while(tokenlist_head != NULL) {
+    printf("Checking the linked list");
     printf("%s\n", tokenlist_head->token);
     tokenlist_head = tokenlist_head->next_token;
   }
