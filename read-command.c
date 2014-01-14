@@ -28,6 +28,8 @@ tokenlist_t insert_at_end (tokenlist_t tail, char *data) {
   unsigned strlength = strlen(data);
   tmp->token = (char *)malloc(sizeof(char) * strlength);
   strncpy(tmp->token, data, strlength);
+  printf("input data is %s\n", data);
+  printf("output data is %s\n", tmp->token);
 
   if (tail != NULL)
     tail->next_token = tmp;
@@ -35,11 +37,12 @@ tokenlist_t insert_at_end (tokenlist_t tail, char *data) {
   return tmp;
 }
 
-// input: tail of a linked list
+// input: tail of a linked list, special character
 // output: tail of a linked list
-tokenlist_t read_pipe (tokenlist_t tail) {
-  printf("entering | case\n");
-  char *token = "|";
+tokenlist_t read_singlespecial (tokenlist_t tail, int c) {
+  char token[5];
+  sprintf(token, "%c", c);
+  printf("entering %s case\n", token);
   tokenlist_t tmp = (tokenlist_t)malloc(sizeof(struct token_list));
   tmp = insert_at_end(tail, token);
   return tmp;
@@ -48,17 +51,38 @@ tokenlist_t read_pipe (tokenlist_t tail) {
 // input: tail of a linked list, character stream
 // output: tail of a linked list
 tokenlist_t read_ampersand (tokenlist_t tail, void *stream) {
-  printf("entering && case\n");
   int c;
   c = getc(stream);
   tokenlist_t tmp = (tokenlist_t)malloc(sizeof(struct token_list));
   if (c == '&') {
+    printf("entering && case\n");
     char *token = "&&";
     tmp = insert_at_end(tail, token);
   } else {
     // push the char back onto the stream
+    printf("entering & case\n");
     ungetc(c, stream);
     char *token = "&";
+    tmp = insert_at_end(tail, token);
+  }
+  return tmp;
+}
+
+// input: tail of a linked list, character stream
+// output: tail of a linked list
+tokenlist_t read_pipe (tokenlist_t tail, void *stream) {
+  int c;
+  c = getc(stream);
+  tokenlist_t tmp = (tokenlist_t)malloc(sizeof(struct token_list));
+  if (c == '|') {
+    printf("entering || case\n");
+    char *token = "||";
+    tmp = insert_at_end(tail, token);
+  } else {
+    // push the char back onto the stream
+    printf("entering | case\n");
+    ungetc(c, stream);
+    char *token = "|";
     tmp = insert_at_end(tail, token);
   }
   return tmp;
@@ -111,8 +135,26 @@ make_command_stream (int (*get_next_byte) (void *),
   while (c != EOF) {
     c = get_next_byte(get_next_byte_argument);
     switch (c) {
+      case ';':
+        tokenlist_end = read_singlespecial(tokenlist_end, c);
+        break;
+      case '(':
+        tokenlist_end = read_singlespecial(tokenlist_end, c);
+        break;
+      case ')':
+        tokenlist_end = read_singlespecial(tokenlist_end, c);
+        break;
+      case '<':
+        tokenlist_end = read_singlespecial(tokenlist_end, c);
+        break;
+      case '>':
+        tokenlist_end = read_singlespecial(tokenlist_end, c);
+        break;
+      case '&':
+        tokenlist_end = read_ampersand(tokenlist_end, get_next_byte_argument);
+        break;
       case '|':
-        tail = read_pipe(tail);
+        tokenlist_end = read_pipe(tokenlist_end, get_next_byte_argument);
         break;
       default:
         break;
