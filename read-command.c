@@ -101,10 +101,10 @@ tokenlist_t read_newline (tokenlist_t tail) {
 tokenlist_t read_word (tokenlist_t tail, void *stream, int c) {
   printf("entering word case\n");
   if (c == ' ' || c == '\t') {
-    printf("finish this simple word\n");
+    // printf("finish this simple word\n");
     return tail;
   } else if (c == '\n') {
-    printf("storing this newline\n");
+    // printf("storing this newline\n");
     ungetc(c, stream);
     return tail;
   } else {
@@ -121,16 +121,16 @@ tokenlist_t read_word (tokenlist_t tail, void *stream, int c) {
     nextchar = getc(stream);
     while (nextchar != EOF) {
       if (nextchar == ' ' || nextchar == '\t') {
-        printf("finishing simple word\n");
+        // printf("finishing simple word\n");
         break;
       } else if (nextchar == '\n') {
-        printf("storing a newline\n");
+        // printf("storing a newline\n");
         ungetc(c, stream);
         break;
       } else {
-        nextchar = getc(stream);
         sprintf(appendchar, "%c", nextchar);
         strcat(newtoken, appendchar);
+        nextchar = getc(stream);
       }
     }
     tmp = insert_at_end(tail, newtoken); 
