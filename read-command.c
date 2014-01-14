@@ -21,20 +21,18 @@ typedef struct token_list *tokenlist_t;
 
 // inputs: tail of a linked list, string data
 // output: pointer to the tail of the linked list
-tokenlist_t insert_at_end (tokenlist_t tail, char *data) {
-  tokenlist_t tmp = (tokenlist_t)malloc(sizeof(struct token_list)); 
+tokenlist_t insert_at_end (tokenlist_t oldtail, char *data) {
+  tokenlist_t newtail = (tokenlist_t)malloc(sizeof(struct token_list)); 
 
   // Assume data is a null-terminated String
   unsigned strlength = strlen(data);
-  tmp->token = (char *)malloc(sizeof(char) * strlength);
-  strncpy(tmp->token, data, strlength);
-  printf("input data is %s\n", data);
-  printf("output data is %s\n", tmp->token);
+  newtail->token = (char *)malloc(sizeof(char) * strlength);
+  strncpy(newtail->token, data, strlength);
 
-  if (tail != NULL)
-    tail->next_token = tmp;
-  tmp->next_token = NULL;
-  return tmp;
+  if (oldtail != NULL)
+    oldtail->next_token = newtail;
+  newtail->next_token = NULL;
+  return newtail;
 }
 
 // input: tail of a linked list, special character
@@ -88,21 +86,59 @@ tokenlist_t read_pipe (tokenlist_t tail, void *stream) {
   return tmp;
 }
 
-// inputs: tail of a linked list, character stream
-// output: pointer to the tail of the linked list
-/*tokenlist_t tokenizer (tokenlist_t tail, void *stream) {
-  int c;
-  while (c != EOF) {
-    c = get_next_byte(stream);
-    switch (c) {
-      case '|':
-        tail = read_pipe(tail);
+// input: tail of a linked list, character stream
+// output: tail of a linked list
+tokenlist_t read_newline (tokenlist_t tail) {
+  printf("Grabbing a newline\n");
+  tokenlist_t tmp = (tokenlist_t)malloc(sizeof(struct token_list));
+  char *token = "\n";
+  tmp = insert_at_end(tail, token);
+  return tmp;
+}
+
+// input: tail of a linked list, character stream, read character
+// output: tail of a linked list
+tokenlist_t read_word (tokenlist_t tail, void *stream, int c) {
+  printf("entering word case\n");
+  if (c == ' ' || c == '\t') {
+    printf("finish this simple word\n");
+    return tail;
+  } else if (c == '\n') {
+    printf("storing this newline\n");
+    ungetc(c, stream);
+    return tail;
+  } else {
+    char newtoken[100]; //FIXME: CANNOT BE STATIC
+    memset(newtoken, '\0', 100);
+    tokenlist_t tmp = (tokenlist_t)malloc(sizeof(struct token_list));
+
+    char appendchar[2];
+    memset(appendchar, '\0', sizeof(appendchar));
+    sprintf(appendchar, "%c", c);
+    strcat(newtoken, appendchar);
+
+    int nextchar;
+    nextchar = getc(stream);
+    while (nextchar != EOF) {
+      if (nextchar == ' ' || nextchar == '\t') {
+        printf("finishing simple word\n");
         break;
-      default:
+      } else if (nextchar == '\n') {
+        printf("storing a newline\n");
+        ungetc(c, stream);
         break;
-    };
+      } else {
+        nextchar = getc(stream);
+        sprintf(appendchar, "%c", nextchar);
+        strcat(newtoken, appendchar);
+      }
+    }
+    tmp = insert_at_end(tail, newtoken); 
+    printf("Storing %s\n", newtoken);
+    //free(newtoken);
+    return tmp;
   }
-}*/
+}
 
 struct command_list
 {
@@ -156,35 +192,14 @@ make_command_stream (int (*get_next_byte) (void *),
       case '|':
         tokenlist_end = read_pipe(tokenlist_end, get_next_byte_argument);
         break;
+      case '\n':
+        tokenlist_end = read_newline(tokenlist_end);
+        break;
       default:
+        tokenlist_end = read_word(tokenlist_end, get_next_byte_argument, c);
         break;
     };
   }
-
-  /*
-  // Array of tokens
-  char **tokenlist; // FIXME: THIS ALSO CANNOT BE STATIC
-  tokenlist = (char **) malloc(size + 2);
-  int tokenPos = 0;
-  printf("Length of string is %d\n", (int) strlen(fullstring));
-  printf("Size of fullstring is %d\n", size);
-  */
-  /*
-  for (i = 0; i < strlen(fullstring); i++) {
-    switch (fullstring[i]) {
-      case '&':
-        printf("entering & case\n");
-        if (fullstring[i + 1] == '&') {
-          char *strdata = "&&";
-          tokenlist_end = insert_at_end(tokenlist_end, strdata);
-          i++;
-        }
-        break;
-      default:
-        break;
-    };
-  }
-  */
 
   while(tokenlist_head != NULL) {
     printf("%s\n", tokenlist_head->token);
