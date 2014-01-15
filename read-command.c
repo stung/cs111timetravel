@@ -32,7 +32,7 @@ tokenlist_t insert_at_end (tokenlist_t oldtail, char *data) {
   if (oldtail != NULL)
     oldtail->next_token = newtail;
   newtail->next_token = NULL;
-  printf("Data inserted was %s\n", newtail->token);
+  // printf("Data inserted was %s\n", newtail->token);
   return newtail;
 }
 
@@ -86,7 +86,7 @@ tokenlist_t read_pipe (tokenlist_t tail, void *stream) {
 // input: tail of a linked list, character stream
 // output: tail of a linked list
 tokenlist_t read_newline (tokenlist_t tail) {
-  printf("Grabbing a newline\n");
+  //printf("Grabbing a newline\n");
   tokenlist_t tmp = (tokenlist_t)malloc(sizeof(struct token_list));
   char *token = "\n";
   tmp = insert_at_end(tail, token);
@@ -118,30 +118,28 @@ tokenlist_t read_word (tokenlist_t tail, void *stream, int c) {
   int nextchar;
   nextchar = getc(stream);
   char shouldExit = 0;
-  while (nextchar != EOF) {
+  while (nextchar != EOF && !shouldExit) {
     switch (nextchar) {
-       case ';':
-       case '(':
-       case ')':
-       case '<':
-       case '>':
-       case '&':
-       case '|':
-       case '\n':
-	  case ' ':
-       case '\t':
-	  case EOF:
-         ungetc(nextchar, stream);
-	    shouldExit = 1;
-	    break;
-       default:
-         sprintf(appendchar, "%c", nextchar);
-         strcat(newtoken, appendchar);
-         nextchar = getc(stream);
-	    break;
+      case ';':
+      case '(':
+      case ')':
+      case '<':
+      case '>':
+      case '&':
+      case '|':
+      case '\n':
+    	case ' ':
+      case '\t':
+  	  case EOF:
+       ungetc(nextchar, stream);
+	     shouldExit = 1;
+	     break;
+      default:
+       sprintf(appendchar, "%c", nextchar);
+       strcat(newtoken, appendchar);
+       nextchar = getc(stream);
+	     break;
     }
-    if (shouldExit == 1)
-	    break;
   }
   tmp = insert_at_end(tail, newtoken); 
   // printf("Storing %s\n", newtoken);
@@ -208,9 +206,9 @@ make_command_stream (int (*get_next_byte) (void *),
         break;
       case '\t':
         break;
-	 case EOF:
-	   break;
-	 default:
+    	case EOF:
+    	  break;
+    	default:
         tokenlist_end = read_word(tokenlist_end, get_next_byte_argument, c);
         break;
     };
@@ -224,7 +222,7 @@ make_command_stream (int (*get_next_byte) (void *),
   
   while(tokenlist_head != NULL) {
     //printf("Checking the linked list");
-    printf("%s\n", tokenlist_head->token);
+    printf("%s ", tokenlist_head->token);
     tokenlist_head = tokenlist_head->next_token;
   }
   
