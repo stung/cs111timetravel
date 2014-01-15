@@ -162,14 +162,14 @@ make_command_stream (int (*get_next_byte) (void *),
      add auxiliary functions and otherwise modify the source code.
      You can also use external functions defined in the GNU C Library.  */
 
-  tokenlist_t tokenlist_head = (tokenlist_t)malloc(sizeof(struct token_list));
-  tokenlist_t tokenlist_end = tokenlist_head;
+  tokenlist_t tokenlist_head = NULL;
+  tokenlist_t tokenlist_end = NULL;
 
   int c;
-  c = get_next_byte(get_next_byte_argument);
 
-  while (c != EOF) {
+do {
     c = get_next_byte(get_next_byte_argument);
+
     switch (c) {
       case ';':
         tokenlist_end = read_singlespecial(tokenlist_end, c);
@@ -199,18 +199,25 @@ make_command_stream (int (*get_next_byte) (void *),
         break;
       case '\t':
         break;
-      default:
+	 case EOF:
+	   break;
+	 default:
         tokenlist_end = read_word(tokenlist_end, get_next_byte_argument, c);
         break;
     };
-  }
 
-  printf("Finished tokenizing");
+    if (tokenlist_head == NULL)
+      tokenlist_head = tokenlist_end;
+  } while (c != EOF);
+
+  printf("Finished tokenizing\n");
+  
   while(tokenlist_head != NULL) {
     printf("Checking the linked list");
     printf("%s\n", tokenlist_head->token);
     tokenlist_head = tokenlist_head->next_token;
   }
+  
   // error (1, 0, "command reading not yet implemented");
   return 0;
 }
