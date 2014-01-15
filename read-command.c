@@ -117,26 +117,35 @@ tokenlist_t read_word (tokenlist_t tail, void *stream, int c) {
 
   int nextchar;
   nextchar = getc(stream);
-  char newlineTerm = 0;
+  char shouldExit = 0;
   while (nextchar != EOF) {
-    if (nextchar == ' ' || nextchar == '\t') {
-      break;
-    } else if (nextchar == '\n') {
-      // printf("storing a newline\n");
-      //ungetc(c, stream);
-      newlineTerm = 1;
-      break;
-    } else {
-      sprintf(appendchar, "%c", nextchar);
-      strcat(newtoken, appendchar);
-      nextchar = getc(stream);
+    switch (nextchar) {
+       case ';':
+       case '(':
+       case ')':
+       case '<':
+       case '>':
+       case '&':
+       case '|':
+       case '\n':
+	  case ' ':
+       case '\t':
+	  case EOF:
+         ungetc(nextchar, stream);
+	    shouldExit = 1;
+	    break;
+       default:
+         sprintf(appendchar, "%c", nextchar);
+         strcat(newtoken, appendchar);
+         nextchar = getc(stream);
+	    break;
     }
+    if (shouldExit == 1)
+	    break;
   }
   tmp = insert_at_end(tail, newtoken); 
   // printf("Storing %s\n", newtoken);
   //free(newtoken);
-  if (newlineTerm)
-    return read_newline(tmp);
   return tmp;
 }
 
@@ -162,14 +171,14 @@ make_command_stream (int (*get_next_byte) (void *),
      add auxiliary functions and otherwise modify the source code.
      You can also use external functions defined in the GNU C Library.  */
 
+  //tokenlist_t tokenlist_head = (tokenlist_t)malloc(sizeof(struct token_list));
   tokenlist_t tokenlist_head = NULL;
   tokenlist_t tokenlist_end = NULL;
 
   int c;
 
-do {
+  do {
     c = get_next_byte(get_next_byte_argument);
-
     switch (c) {
       case ';':
         tokenlist_end = read_singlespecial(tokenlist_end, c);
@@ -208,12 +217,13 @@ do {
 
     if (tokenlist_head == NULL)
       tokenlist_head = tokenlist_end;
+  
   } while (c != EOF);
 
   printf("Finished tokenizing\n");
   
   while(tokenlist_head != NULL) {
-    printf("Checking the linked list");
+    //printf("Checking the linked list");
     printf("%s\n", tokenlist_head->token);
     tokenlist_head = tokenlist_head->next_token;
   }
