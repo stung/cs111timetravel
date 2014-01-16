@@ -14,15 +14,15 @@
 
 enum parse_type
 {
-  WORD,
-  NEWLINE,
   SUBSHELL,
   REDIRECT_LESS,
   REDIRECT_MORE,
+  PIPE,
   AMPERSAND,
   OR,
-  PIPE,
   SEMICOLON,
+  NEWLINE,
+  WORD,
 };
 
 struct token_list
@@ -30,7 +30,6 @@ struct token_list
   enum parse_type comType;
   char *token;
   struct token_list *next_token;
-  enum commandDelimiter comDelim;
 };
 
 typedef struct token_list *tokenlist_t;
@@ -127,13 +126,15 @@ tokenlist_t read_pipe (tokenlist_t tail, void *stream) {
 tokenlist_t read_newline (tokenlist_t tail) {
   //printf("Grabbing a newline\n");
   tokenlist_t tmp = (tokenlist_t)malloc(sizeof(struct token_list));
-  char *token = "\n";
-  tmp = insert_at_end(tail, token);
   tmp->comType = NEWLINE;
-  if (tail->token) {
-    tail->commStatus = 
+  if ((tail->comType == OR) || (tail->comType == PIPE) || 
+        (tail->comType == AMPERSAND)) {
+    return tail;
+  } else {
+    char *token = "\n";
+    tmp = insert_at_end(tail, token);
+    return tmp;
   }
-  return tmp;
 }
 
 // input: tail of a linked list, character stream, read character
@@ -215,7 +216,7 @@ void push(stack_t theStack, char* data)
 }
 
 // Input: Stack pointer
-// Output: Stack pointer
+// Output: Stack Node pointer
 stacknode_t pop(stack_t theStack)
 {
   stacknode_t newtop = NULL;
@@ -236,10 +237,15 @@ stacknode_t pop(stack_t theStack)
 }
 
 tokenlist_t inToRPN(tokenlist_t inTokens) {
-  tokenlist_t rpnTokens = (tokenlist_t)malloc(sizeof(struct token_list));
+  tokenlist_t rpnTokens = NULL; //(tokenlist_t)malloc(sizeof(struct token_list));
   tokenlist_t rpnTokens_end = rpnTokens;
+
   stack_t operatorStack = (stack_t)malloc(sizeof(struct stack));
   memset(operatorStack, 0, sizeof(struct stack));
+
+  stacknode_t readNode = (stacknode_t)malloc(sizeof(struct stack_node));
+  memset(readNode, 0, sizeof(struct stack_node));
+
   char rpn[100]; //FIXME: CANNOT BE STATIC
   memset(rpn, '\0', sizeof(rpn));
 
@@ -249,9 +255,32 @@ tokenlist_t inToRPN(tokenlist_t inTokens) {
         rpnTokens_end = insert_at_end(rpnTokens_end, inTokens->token);
         break;
       case NEWLINE:
+        rpnTokens_end = insert_at_end(rpnTokens_end, inTokens->token);
         break;
       case SUBSHELL:
-        break;
+        printf("Subshell time");
+        if (strcmp(inTokens->token, "(") == 0) {
+          push(operatorStack, inTokens->token);
+          break;
+        } else {
+          readNode = pop(operatorStack);
+          if (readNode == NULL)
+            break;
+          else {
+            rpnTokens_end = insert_at_end(rpnTokens_end, readNode->stackdata);
+
+            // pop all the way until you hit the open paren in the stack
+            while (strcmp(readNode->stackdata, "(") != 0) {
+              readNode = pop(operatorStack);
+              if (readNode != NULL)
+                rpnTokens_end = insert_at_end(rpnTokens_end, readNode->stackdata);
+              else {
+                break;
+              }
+            }
+            break;
+          }
+        }
       case REDIRECT_MORE:
         rpnTokens_end = insert_at_end(rpnTokens_end, inTokens->token);
         break;
@@ -259,11 +288,30 @@ tokenlist_t inToRPN(tokenlist_t inTokens) {
         rpnTokens_end = insert_at_end(rpnTokens_end, inTokens->token);
         break;
       case AMPERSAND:
-
+        printf("pushin' amps\n");
+        readNode = operatorStack->topNode;
+        if (readNode == NULL) {
+          push(operatorStack, inTokens->token);
+        } else if (strcmp(readNode->stackdata, "||") == 0) {
+          readNode = pop(operatorStack);
+          rpnTokens_end = insert_at_end(rpnTokens_end, readNode->stackdata);
+          push(operatorStack, inTokens->token);
+        } else if ((strcmp(readNode->stackdata, "|") == 0) &&
+                    (strcmp(readNode->stackdata, "<") == 0) &&
+                    (strcmp(readNode->stackdata, ">") == 0)) {
+          while ((strcmp(readNode->stackdata, "||") != 0) && 
+                  (strcmp(readNode->stackdata, "&&") != 0)) {
+            rpnTokens_end = insert_at_end(rpnTokens_end, readNode->stackdata);
+            readNode = pop(operatorStack);
+          }
+        } else {
+          push(operatorStack, inTokens->token);
+        }
         break;
       case OR:
         break;
       case PIPE:
+        printf("pushin' pipes\n");
         break;
       case SEMICOLON:
         break;
@@ -274,10 +322,11 @@ tokenlist_t inToRPN(tokenlist_t inTokens) {
     // Obtain next token
     inTokens = inTokens->next_token;
   }
+  printf("Finished In to RPN!");
 
   tokenlist_t rpnTest = rpnTokens;
   while(rpnTest != NULL) {
-    //printf("Checking the linked list");
+    printf("Checking the rpn tokenlist");
     printf("%s ", rpnTest->token);
     rpnTest = rpnTest->next_token;
   } 
