@@ -11,8 +11,23 @@
 
 /* FIXME: You may need to add #include directives, macro definitions,
    static function definitions, etc.  */
+
+enum parse_type
+{
+  WORD,
+  NEWLINE,
+  SUBSHELL,
+  REDIRECT_LESS,
+  REDIRECT_MORE,
+  AMPERSAND,
+  OR,
+  PIPE,
+  SEMICOLON,
+};
+
 struct token_list
 {
+  enum parse_type comType;
   char *token;
   struct token_list *next_token;
 };
@@ -44,6 +59,25 @@ tokenlist_t read_singlespecial (tokenlist_t tail, int c) {
   sprintf(token, "%c", c);
   tokenlist_t tmp = (tokenlist_t)malloc(sizeof(struct token_list));
   tmp = insert_at_end(tail, token);
+  switch (c) {
+    case ';':
+      tmp->comType = SEMICOLON;
+      break;
+    case '(':
+      tmp->comType = SUBSHELL;
+      break;
+    case ')':
+      tmp->comType = SUBSHELL;
+      break;
+    case '<':
+      tmp->comType = REDIRECT_LESS;
+      break;
+    case '>':
+      tmp->comType = REDIRECT_MORE;
+      break;
+    default:
+      break;
+  }
   return tmp;
 }
 
@@ -56,11 +90,13 @@ tokenlist_t read_ampersand (tokenlist_t tail, void *stream) {
   if (c == '&') {
     char *token = "&&";
     tmp = insert_at_end(tail, token);
+    tmp->comType = AMPERSAND;
   } else {
     // push the char back onto the stream
     ungetc(c, stream);
     char *token = "&";
     tmp = insert_at_end(tail, token);
+    tmp->comType = WORD;
   }
   return tmp;
 }
@@ -74,11 +110,13 @@ tokenlist_t read_pipe (tokenlist_t tail, void *stream) {
   if (c == '|') {
     char *token = "||";
     tmp = insert_at_end(tail, token);
+    tmp->comType = OR;
   } else {
     // push the char back onto the stream
     ungetc(c, stream);
     char *token = "|";
     tmp = insert_at_end(tail, token);
+    tmp->comType = PIPE;
   }
   return tmp;
 }
@@ -90,6 +128,7 @@ tokenlist_t read_newline (tokenlist_t tail) {
   tokenlist_t tmp = (tokenlist_t)malloc(sizeof(struct token_list));
   char *token = "\n";
   tmp = insert_at_end(tail, token);
+  tmp->comType = NEWLINE;
   return tmp;
 }
 
@@ -132,8 +171,8 @@ tokenlist_t read_word (tokenlist_t tail, void *stream, int c) {
     }
   }
   tmp = insert_at_end(tail, newtoken); 
+  tmp->comType = WORD;
   // printf("Storing %s\n", newtoken);
-  //free(newtoken);
   return tmp;
 }
 
@@ -207,10 +246,51 @@ stacknode_t pop(stack_t theStack)
   return oldtop;
 }
 
-tokenlist_t inToRPN(tokenlist_t rpnTokens, tokenlist_t inTokens) {
-  stack_t operatorStack = NULL;
-  char rpn[]
+tokenlist_t inToRPN(tokenlist_t inTokens) {
+  tokenlist_t rpnTokens = (tokenlist_t)malloc(sizeof(struct token_list));
+  stack_t operatorStack = (stack_t)malloc(sizeof(struct stack));
+  memset(operatorStack, 0, sizeof(struct stack));
+  char rpn[100]; //FIXME: CANNOT BE STATIC
+  memset(rpn, '\0', sizeof(rpn));
 
+  while(inTokens != NULL) {
+    switch (inTokens->comType) {
+      case WORD:
+        printf("WORD\n");
+        break;
+      case NEWLINE:
+        printf("NEWLINE\n");
+        break;
+      case SUBSHELL:
+        printf("SUBSHELL\n");
+        break;
+      case REDIRECT_MORE:
+        printf("REDIRECT_MORE\n");
+        break;
+      case REDIRECT_LESS:
+        printf("REDIRECT_LESS\n");
+        break;
+      case AMPERSAND:
+        printf("AMPERSAND\n");
+        break;
+      case OR:
+        printf("OR\n");
+        break;
+      case PIPE:
+        printf("PIPE\n");
+        break;
+      case SEMICOLON:
+        printf("SEMICOLON\n");
+        break;
+      default:
+        printf("Not a valid comType?\n");
+        break;
+    }
+    // Obtain next token
+    inTokens = inTokens->next_token;
+  }
+
+  return rpnTokens;
 }
 
 command_stream_t
@@ -281,7 +361,7 @@ make_command_stream (int (*get_next_byte) (void *),
   
   // Parsing infix into RPN
   tokenlist_t rpnTokens = NULL;
-  rpnTokens = inToRPN(rpnTokens, tokenlist_head);
+  rpnTokens = inToRPN(tokenlist_head);
 
 
 
