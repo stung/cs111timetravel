@@ -30,6 +30,7 @@ struct token_list
   enum parse_type comType;
   char *token;
   struct token_list *next_token;
+  enum commandDelimiter comDelim;
 };
 
 typedef struct token_list *tokenlist_t;
@@ -129,6 +130,9 @@ tokenlist_t read_newline (tokenlist_t tail) {
   char *token = "\n";
   tmp = insert_at_end(tail, token);
   tmp->comType = NEWLINE;
+  if (tail->token) {
+    tail->commStatus = 
+  }
   return tmp;
 }
 
@@ -175,21 +179,6 @@ tokenlist_t read_word (tokenlist_t tail, void *stream, int c) {
   // printf("Storing %s\n", newtoken);
   return tmp;
 }
-
-struct command_list
-{
-  // next command in the linked list
-  struct command *next_command;
-};
-
-/* FIXME: Define the type 'struct command_stream' here.  This should
-   complete the incomplete type declaration in command.h.  */
-struct command_stream
-{
-  // Pointer to the first command in the list 
-  struct command *first_command;
-};
-
 
 // STACK IMPLEMENTATION
 struct stack_node
@@ -248,6 +237,7 @@ stacknode_t pop(stack_t theStack)
 
 tokenlist_t inToRPN(tokenlist_t inTokens) {
   tokenlist_t rpnTokens = (tokenlist_t)malloc(sizeof(struct token_list));
+  tokenlist_t rpnTokens_end = rpnTokens;
   stack_t operatorStack = (stack_t)malloc(sizeof(struct stack));
   memset(operatorStack, 0, sizeof(struct stack));
   char rpn[100]; //FIXME: CANNOT BE STATIC
@@ -256,31 +246,26 @@ tokenlist_t inToRPN(tokenlist_t inTokens) {
   while(inTokens != NULL) {
     switch (inTokens->comType) {
       case WORD:
-        printf("WORD\n");
+        rpnTokens_end = insert_at_end(rpnTokens_end, inTokens->token);
         break;
       case NEWLINE:
-        printf("NEWLINE\n");
         break;
       case SUBSHELL:
-        printf("SUBSHELL\n");
         break;
       case REDIRECT_MORE:
-        printf("REDIRECT_MORE\n");
+        rpnTokens_end = insert_at_end(rpnTokens_end, inTokens->token);
         break;
       case REDIRECT_LESS:
-        printf("REDIRECT_LESS\n");
+        rpnTokens_end = insert_at_end(rpnTokens_end, inTokens->token);
         break;
       case AMPERSAND:
-        printf("AMPERSAND\n");
+
         break;
       case OR:
-        printf("OR\n");
         break;
       case PIPE:
-        printf("PIPE\n");
         break;
       case SEMICOLON:
-        printf("SEMICOLON\n");
         break;
       default:
         printf("Not a valid comType?\n");
@@ -290,8 +275,29 @@ tokenlist_t inToRPN(tokenlist_t inTokens) {
     inTokens = inTokens->next_token;
   }
 
+  tokenlist_t rpnTest = rpnTokens;
+  while(rpnTest != NULL) {
+    //printf("Checking the linked list");
+    printf("%s ", rpnTest->token);
+    rpnTest = rpnTest->next_token;
+  } 
   return rpnTokens;
 }
+
+// Command List Implementation
+struct command_list
+{
+  // next command in the linked list
+  struct command *next_command;
+};
+
+/* FIXME: Define the type 'struct command_stream' here.  This should
+   complete the incomplete type declaration in command.h.  */
+struct command_stream
+{
+  // Pointer to the first command in the list 
+  struct command *first_command;
+};
 
 command_stream_t
 make_command_stream (int (*get_next_byte) (void *),
