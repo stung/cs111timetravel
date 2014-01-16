@@ -96,16 +96,6 @@ tokenlist_t read_newline (tokenlist_t tail) {
 // input: tail of a linked list, character stream, read character
 // output: tail of a linked list
 tokenlist_t read_word (tokenlist_t tail, void *stream, int c) {
-  // printf("entering word case\n");
-  /* if (c == ' ' || c == '\t') {
-    // printf("finish this simple word\n");
-    return tail;
-  } else if (c == '\n') {
-    // printf("storing this newline\n");
-    ungetc(c, stream);
-    return tail;
-  } else {
-    */
   char newtoken[100]; //FIXME: CANNOT BE STATIC
   memset(newtoken, '\0', sizeof(newtoken));
   tokenlist_t tmp = (tokenlist_t)malloc(sizeof(struct token_list));
@@ -161,6 +151,68 @@ struct command_stream
   struct command *first_command;
 };
 
+
+// STACK IMPLEMENTATION
+struct stack_node
+{
+  char *stackdata;
+  struct stack_node *next_node;
+};
+
+struct stack
+{
+  struct stack_node *topNode;
+};
+
+typedef struct stack_node *stacknode_t;
+typedef struct stack *stack_t;
+
+// Input: Stack pointer, String data to be new top
+// Output: void
+void push(stack_t theStack, char* data)
+{
+  stacknode_t newtop = (stacknode_t)malloc(sizeof(struct stack_node));
+
+  // Assume data is a null-terminated String
+  unsigned strlength = strlen(data);
+  newtop->stackdata = (char *)malloc(sizeof(char) * strlength);
+  strncpy(newtop->stackdata, data, strlength);
+
+  if (theStack == NULL)
+    theStack = (stack_t)malloc(sizeof(struct stack));
+  else
+    newtop->next_node = theStack->topNode;
+  theStack->topNode = newtop;
+  return;
+}
+
+// Input: Stack pointer
+// Output: Stack pointer
+stacknode_t pop(stack_t theStack)
+{
+  stacknode_t newtop = NULL;
+  stacknode_t oldtop = NULL;
+
+  // Rearranging the new top node
+  oldtop = theStack->topNode;
+  if (oldtop == NULL) {
+    printf("ERROR: Nothing in stack!");
+    return oldtop;
+  }
+
+  newtop = oldtop->next_node;
+  oldtop->next_node = NULL;
+
+  theStack->topNode = newtop;
+  return oldtop;
+}
+
+tokenlist_t inToRPN(tokenlist_t rpnTokens, tokenlist_t inTokens) {
+  stack_t operatorStack = NULL;
+  char rpn[]
+
+}
+
 command_stream_t
 make_command_stream (int (*get_next_byte) (void *),
          void *get_next_byte_argument)
@@ -170,11 +222,11 @@ make_command_stream (int (*get_next_byte) (void *),
      You can also use external functions defined in the GNU C Library.  */
 
   //tokenlist_t tokenlist_head = (tokenlist_t)malloc(sizeof(struct token_list));
+  // Tokeninzing our commands
   tokenlist_t tokenlist_head = NULL;
   tokenlist_t tokenlist_end = NULL;
 
   int c;
-
   do {
     c = get_next_byte(get_next_byte_argument);
     switch (c) {
@@ -220,12 +272,19 @@ make_command_stream (int (*get_next_byte) (void *),
 
   printf("Finished tokenizing\n");
   
-  while(tokenlist_head != NULL) {
+  tokenlist_t test = tokenlist_head;
+  while(test != NULL) {
     //printf("Checking the linked list");
-    printf("%s ", tokenlist_head->token);
-    tokenlist_head = tokenlist_head->next_token;
+    printf("%s ", test->token);
+    test = test->next_token;
   }
   
+  // Parsing infix into RPN
+  tokenlist_t rpnTokens = NULL;
+  rpnTokens = inToRPN(rpnTokens, tokenlist_head);
+
+
+
   // error (1, 0, "command reading not yet implemented");
   return 0;
 }
