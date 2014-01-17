@@ -191,6 +191,60 @@ tokenlist_t read_word (tokenlist_t tail, void *stream, int c) {
   return tmp;
 }
 
+tokenlist_t intoTokens(int (*get_next_byte) (void *),
+         void *get_next_byte_argument) {
+
+  // Tokeninzing our commands
+  tokenlist_t tokenlist_head = NULL;
+  tokenlist_t tokenlist_end = NULL;
+
+  int c;
+  do {
+    c = get_next_byte(get_next_byte_argument);
+    switch (c) {
+      case ';':
+        tokenlist_end = read_singlespecial(tokenlist_end, c);
+        break;
+      case '(':
+        tokenlist_end = read_singlespecial(tokenlist_end, c);
+        break;
+      case ')':
+        tokenlist_end = read_singlespecial(tokenlist_end, c);
+        break;
+      case '<':
+        tokenlist_end = read_singlespecial(tokenlist_end, c);
+        break;
+      case '>':
+        tokenlist_end = read_singlespecial(tokenlist_end, c);
+        break;
+      case '&':
+        tokenlist_end = read_ampersand(tokenlist_end, get_next_byte_argument);
+        break;
+      case '|':
+        tokenlist_end = read_pipe(tokenlist_end, get_next_byte_argument);
+        break;
+      case '\n':
+        tokenlist_end = read_newline(tokenlist_end);
+        break;
+      case ' ':
+        break;
+      case '\t':
+        break;
+    	case EOF:
+    	  break;
+    	default:
+        tokenlist_end = read_word(tokenlist_end, get_next_byte_argument, c);
+        break;
+    };
+
+    if (tokenlist_head == NULL)
+      tokenlist_head = tokenlist_end;
+  
+  } while (c != EOF);
+
+  return tokenlist_head;
+}
+
 // STACK IMPLEMENTATION
 struct stack_node
 {
@@ -377,54 +431,9 @@ make_command_stream (int (*get_next_byte) (void *),
      add auxiliary functions and otherwise modify the source code.
      You can also use external functions defined in the GNU C Library.  */
 
-  //tokenlist_t tokenlist_head = (tokenlist_t)malloc(sizeof(struct token_list));
-  // Tokeninzing our commands
+  // Parsing file to token list
   tokenlist_t tokenlist_head = NULL;
-  tokenlist_t tokenlist_end = NULL;
-
-  int c;
-  do {
-    c = get_next_byte(get_next_byte_argument);
-    switch (c) {
-      case ';':
-        tokenlist_end = read_singlespecial(tokenlist_end, c);
-        break;
-      case '(':
-        tokenlist_end = read_singlespecial(tokenlist_end, c);
-        break;
-      case ')':
-        tokenlist_end = read_singlespecial(tokenlist_end, c);
-        break;
-      case '<':
-        tokenlist_end = read_singlespecial(tokenlist_end, c);
-        break;
-      case '>':
-        tokenlist_end = read_singlespecial(tokenlist_end, c);
-        break;
-      case '&':
-        tokenlist_end = read_ampersand(tokenlist_end, get_next_byte_argument);
-        break;
-      case '|':
-        tokenlist_end = read_pipe(tokenlist_end, get_next_byte_argument);
-        break;
-      case '\n':
-        tokenlist_end = read_newline(tokenlist_end);
-        break;
-      case ' ':
-        break;
-      case '\t':
-        break;
-    	case EOF:
-    	  break;
-    	default:
-        tokenlist_end = read_word(tokenlist_end, get_next_byte_argument, c);
-        break;
-    };
-
-    if (tokenlist_head == NULL)
-      tokenlist_head = tokenlist_end;
-  
-  } while (c != EOF);
+  tokenlist_head = intoTokens(get_next_byte, get_next_byte_argument);
 
   printf("Finished tokenizing\n");
   
