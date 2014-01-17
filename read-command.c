@@ -433,9 +433,7 @@ command_stream_t rpnToCommTree(tokenlist_t inRPNTokens) {
   command_stream_t outCommStream =
         (command_stream_t)malloc(sizeof(struct command_stream));
   memset(outCommStream, 0, sizeof(struct command_stream));
-
-  ctnode_t readNode = (ctnode_t)malloc(sizeof(struct ctStack_node));
-  memset(readNode, 0, sizeof(struct ctStack_node));
+ ctnode_t readNode = (ctnode_t)malloc(sizeof(struct ctStack_node)); memset(readNode, 0, sizeof(struct ctStack_node));
 
   command_t readData = (command_t)malloc(sizeof(struct command));
   memset(readData, 0, sizeof(struct command));
@@ -445,8 +443,8 @@ command_stream_t rpnToCommTree(tokenlist_t inRPNTokens) {
       case WORD:
         readData->type = SIMPLE_COMMAND;
         readData->status = -1;
-        readData->input = NULL;
-        readData->output = NULL;
+        readData->input = 0;
+        readData->output = 0;
 
         int i = 0;
         readData->u.word = (char *)malloc(sizeof(char *) * 20); //FIXME: CANNOT BE STATIC
@@ -465,82 +463,78 @@ command_stream_t rpnToCommTree(tokenlist_t inRPNTokens) {
         ctPush(outCommStream, readData);
         break;
       case NEWLINE:
-        if (operatorStack == NULL) {
-          rpnTokens_end = insert_at_end(rpnTokens_end, inTokens->token);
-          break;
-        }
-        while (operatorStack->topNode != NULL) {
-          readNode = pop(operatorStack);
-          rpnTokens_end = insert_at_end(rpnTokens_end, readNode->stackdata);
-        }
-        rpnTokens_end = insert_at_end(rpnTokens_end, inTokens->token);
+        // if (operatorStack == NULL) {
+        //   rpnTokens_end = insert_at_end(rpnTokens_end, inTokens->token);
+        //   break;
+        // }
+        // while (operatorStack->topNode != NULL) {
+        //   readNode = pop(operatorStack);
+        //   rpnTokens_end = insert_at_end(rpnTokens_end, readNode->stackdata);
+        // }
+        // rpnTokens_end = insert_at_end(rpnTokens_end, inTokens->token);
         break;
       case SUBSHELL:
-        if (strcmp(inTokens->token, "(") == 0) {
-          push(operatorStack, inTokens->token);
-          break;
-        } else {
-          readNode = pop(operatorStack);
-          if (readNode == NULL)
-            break;
-          else {
-            rpnTokens_end = insert_at_end(rpnTokens_end, readNode->stackdata);
+        // if (strcmp(inTokens->token, "(") == 0) {
+        //   push(operatorStack, inTokens->token);
+        //   break;
+        // } else {
+        //   readNode = pop(operatorStack);
+        //   if (readNode == NULL)
+        //     break;
+        //   else {
+        //     rpnTokens_end = insert_at_end(rpnTokens_end, readNode->stackdata);
 
-            // pop all the way until you hit the open paren in the stack
-            while (strcmp(readNode->stackdata, "(") != 0) {
-              readNode = pop(operatorStack);
-              if (readNode != NULL)
-                rpnTokens_end = insert_at_end(rpnTokens_end, readNode->stackdata);
-              else {
-                break;
-              }
-            }
-            break;
-          }
-          break;
-        }
+        //     // pop all the way until you hit the open paren in the stack
+        //     while (strcmp(readNode->stackdata, "(") != 0) {
+        //       readNode = pop(operatorStack);
+        //       if (readNode != NULL)
+        //         rpnTokens_end = insert_at_end(rpnTokens_end, readNode->stackdata);
+        //       else {
+        //         break;
+        //       }
+        //     }
+        //     break;
+        //   }
+        //   break;
+        // }
         break;
       case REDIRECT_MORE:
-        rpnTokens_end = insert_at_end(rpnTokens_end, inTokens->token);
+        // rpnTokens_end = insert_at_end(rpnTokens_end, inTokens->token);
         break;
       case REDIRECT_LESS:
-        rpnTokens_end = insert_at_end(rpnTokens_end, inTokens->token);
+        // rpnTokens_end = insert_at_end(rpnTokens_end, inTokens->token);
         break;
       case PIPE:
       case AMPERSAND:
-        readData
-
-        = ctPop(outStream);
-        = ctPop(outStream);
-        ctPush(outStream, readData);
-        break;
       case OR:
-        readNode = operatorStack->topNode;
-        if (readNode == NULL) {
-          push(operatorStack, inTokens->token);
-        } else if (strcmp(readNode->stackdata, ";") == 0) {
-          push(operatorStack, inTokens->token);
-        } else if (strcmp(readNode->stackdata, "(") == 0) {
-          push(operatorStack, inTokens->token);
-        } else {
-          readNode = pop(operatorStack);
-          rpnTokens_end = insert_at_end(rpnTokens_end, readNode->stackdata);
-          push(operatorStack, inTokens->token);
-        }
-        break;
       case SEMICOLON:
-        if (operatorStack == NULL) {
-            rpnTokens_end = insert_at_end(rpnTokens_end, inTokens->token);
-            break;
-          }
-          readNode = operatorStack->topNode;
-          // Stop when stack is empty or when you hit a subshell
-          while ((readNode != NULL) && 
-                  (strcmp(readNode->stackdata, "(") != 0)) {
-            readNode = pop(operatorStack);
-            rpnTokens_end = insert_at_end(rpnTokens_end, readNode->stackdata);
-          }
-          rpnTokens_end = insert_at_end(rpnTokens_end, inTokens->token);
+        readData->status = -1;
+        readData->input = 0;
+        readData->output = 0;
+
+        // subCommands to be written to
+        ctnode_t subCommand = NULL;
+        int i = 0;
+        while (i < 2) {
+          subCommand = ctPop(outStream);
+          readData->u.command[i] = subCommand->currCommand;
+          i++;
+        }
+
+        // Assigning the command type
+        if (inRPNTokens->comType == PIPE) {
+          readData->type = PIPE_COMMAND;
+        } else if (inRPNTokens->comType == AMPERSAND) {
+          readData->type = AND_COMMAND;
+        } else if (inRPNTokens->comType == OR) {
+          readData->type = OR_COMMAND;
+        } else if (inRPNTokens->comType == SEMICOLON) {
+          readData->type = SEQUENCE_COMMAND;
+        } else {
+          printf("ERROR: Should not be here");
+        }
+        
+        ctPush(outStream, readData);
         break;
       default:
         printf("Not a valid comType\n");
