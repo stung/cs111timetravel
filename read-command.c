@@ -567,7 +567,17 @@ command_stream_t rpnToCommTree(token_node_t inRPNTokens) {
     inRPNTokens = inRPNTokens->next_token;
 	 // printf("%s\n", inRPNTokens->token);
   }
-  return outCommStream;
+
+  command_stream_t commStream =
+        (command_stream_t)malloc(sizeof(struct command_stream));
+  memset(commStream, 0, sizeof(struct command_stream));
+  ctnode_t tmpNode = (ctnode_t)malloc(sizeof(struct ctStack_node)); memset(readNode, 0, sizeof(struct ctStack_node));
+  
+  while((tmpNode = ctPop(outCommStream)) != NULL) {
+  	ctPush(commStream, tmpNode->currCommand);
+  }
+
+  return commStream;
 }
 
 
