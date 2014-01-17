@@ -253,6 +253,8 @@ stacknode_t pop(stack_t theStack) {
   return oldtop;
 }
 
+// Input: list of tokens in infix form
+// Output: list of tokens in RPN form
 tokenlist_t inToRPN(tokenlist_t inTokens) {
   tokenlist_t rpnTokens = NULL; // (tokenlist_t)malloc(sizeof(struct token_list));
   tokenlist_t rpnTokens_end = rpnTokens;
@@ -335,6 +337,7 @@ tokenlist_t inToRPN(tokenlist_t inTokens) {
             break;
           }
           readNode = operatorStack->topNode;
+          // Stop when stack is empty or when you hit a subshell
           while ((readNode != NULL) && 
                   (strcmp(readNode->stackdata, "(") != 0)) {
             readNode = pop(operatorStack);
@@ -346,30 +349,210 @@ tokenlist_t inToRPN(tokenlist_t inTokens) {
         printf("Not a valid comType?\n");
         break;
     }
-
     if (rpnTokens == NULL)
       rpnTokens = rpnTokens_end;
     // Obtain next token
     inTokens = inTokens->next_token;
   }
-
   return rpnTokens;
 }
 
-// Command List Implementation
-struct command_list
+
+// RPN to Command Tree Stack
+struct ctStack_node
 {
-  // next command in the linked list
-  struct command *next_command;
+  command_t currCommand;
+  struct ctStack_node *next_node;
 };
 
 /* FIXME: Define the type 'struct command_stream' here.  This should
    complete the incomplete type declaration in command.h.  */
 struct command_stream
 {
-  // Pointer to the first command in the list 
-  struct command *first_command;
+  struct ctStack_node *topNode;
 };
+
+typedef struct ctStack_node *ctnode_t;
+
+// Input: command stream, command to be new top
+// Output: void
+void ctPush(command_stream_t inCTStack, command_t data) {
+  ctnode_t newtop = (ctnode_t)malloc(sizeof(struct ctStack_node));
+  command_t newCommand = (command_t)malloc(sizeof(struct command));
+
+  newCommand->type = data->type;
+  newCommand->status = data->status;
+  newCommand->input = data->input;
+  newCommand->output = data->output;
+  newCommand->u = data->u;
+
+  newtop->currCommand = newCommand;
+
+  // If the current stack is empty
+  if (inCTStack == NULL)
+    inCTStack = (command_stream_t)malloc(sizeof(struct command_stream));
+  else
+    newtop->next_node = inCTStack->topNode;
+  // Stack's new top node will be newtop
+  inCTStack->topNode = newtop;
+  return;
+}
+
+// Input: command stream
+// Output: command Node pointer
+ctnode_t ctPop(command_stream_t inCTStack) {
+  ctnode_t newtop = NULL;
+  ctnode_t oldtop = NULL;
+
+  // Rearranging the new top node
+  if (inCTStack == NULL) {
+    printf("ERROR: Stack is NULL!\n");
+    return oldtop;
+  }
+
+  // The old top will be the stack's current top node
+  oldtop = inCTStack->topNode;
+  if (oldtop == NULL) {
+    printf("ERROR: Nothing in stack!\n");
+    return oldtop;
+  }
+
+  // The new top is the node below the top node
+  // Set the old top's next node pointer to NULL for safety
+  newtop = oldtop->next_node;
+  oldtop->next_node = NULL;
+
+  // Updating the stack's top node to be the new top
+  inCTStack->topNode = newtop;
+  return oldtop;
+}
+
+// Input: RPN Token
+// Output: pointer to command struct
+command_t tokToComm(tokenlist_t rpnToken) {
+  switch(rpnToken->comType) {
+    case WORD:
+    case NEWLINE:
+    case SUBSHELL:
+    case REDIRECT_MORE:
+    case REDIRECT_LESS:
+    case PIPE:
+    case AMPERSAND:
+    case OR:
+    case SEMICOLON:
+    default:
+      printf("Not a valid comType\n");
+      break;
+  }
+
+}
+
+
+// Input: token list of RPN tokens
+// Output: command stream of commands
+command_stream_t rpnToCommTree(tokenlist_t inRPNTokens) {
+  command_stream_t outCommStream =
+        (command_stream_t)malloc(sizeof(struct command_stream));
+  memset(outCommStream, 0, sizeof(struct command_stream));
+
+  ctnode_t readNode = (ctnode_t)malloc(sizeof(struct ctStack_node));
+  memset(readNode, 0, sizeof(struct ctStack_node));
+
+  command_t readData = (command_t)malloc(sizeof(struct command));
+  memset(readData, 0, sizeof(struct command));
+
+  while(inRPNTokens != NULL) {
+    switch (inRPNTokens->comType) {
+      case WORD:
+        // FIXME: Use a token to command function here
+        ctPush(outCommStream, command_t)
+        rpnTokens_end = insert_at_end(rpnTokens_end, inTokens->token);
+        break;
+      case NEWLINE:
+        if (operatorStack == NULL) {
+          rpnTokens_end = insert_at_end(rpnTokens_end, inTokens->token);
+          break;
+        }
+        while (operatorStack->topNode != NULL) {
+          readNode = pop(operatorStack);
+          rpnTokens_end = insert_at_end(rpnTokens_end, readNode->stackdata);
+        }
+        rpnTokens_end = insert_at_end(rpnTokens_end, inTokens->token);
+        break;
+      case SUBSHELL:
+        if (strcmp(inTokens->token, "(") == 0) {
+          push(operatorStack, inTokens->token);
+          break;
+        } else {
+          readNode = pop(operatorStack);
+          if (readNode == NULL)
+            break;
+          else {
+            rpnTokens_end = insert_at_end(rpnTokens_end, readNode->stackdata);
+
+            // pop all the way until you hit the open paren in the stack
+            while (strcmp(readNode->stackdata, "(") != 0) {
+              readNode = pop(operatorStack);
+              if (readNode != NULL)
+                rpnTokens_end = insert_at_end(rpnTokens_end, readNode->stackdata);
+              else {
+                break;
+              }
+            }
+            break;
+          }
+          break;
+        }
+        break;
+      case REDIRECT_MORE:
+        rpnTokens_end = insert_at_end(rpnTokens_end, inTokens->token);
+        break;
+      case REDIRECT_LESS:
+        rpnTokens_end = insert_at_end(rpnTokens_end, inTokens->token);
+        break;
+      case PIPE:
+      case AMPERSAND:
+      case OR:
+        readNode = operatorStack->topNode;
+        if (readNode == NULL) {
+          push(operatorStack, inTokens->token);
+        } else if (strcmp(readNode->stackdata, ";") == 0) {
+          push(operatorStack, inTokens->token);
+        } else if (strcmp(readNode->stackdata, "(") == 0) {
+          push(operatorStack, inTokens->token);
+        } else {
+          readNode = pop(operatorStack);
+          rpnTokens_end = insert_at_end(rpnTokens_end, readNode->stackdata);
+          push(operatorStack, inTokens->token);
+        }
+        break;
+      case SEMICOLON:
+        if (operatorStack == NULL) {
+            rpnTokens_end = insert_at_end(rpnTokens_end, inTokens->token);
+            break;
+          }
+          readNode = operatorStack->topNode;
+          // Stop when stack is empty or when you hit a subshell
+          while ((readNode != NULL) && 
+                  (strcmp(readNode->stackdata, "(") != 0)) {
+            readNode = pop(operatorStack);
+            rpnTokens_end = insert_at_end(rpnTokens_end, readNode->stackdata);
+          }
+          rpnTokens_end = insert_at_end(rpnTokens_end, inTokens->token);
+        break;
+      default:
+        printf("Not a valid comType\n");
+        break;
+    }
+    if (rpnTokens == NULL)
+      rpnTokens = rpnTokens_end;
+    // Obtain next token
+    inTokens = inTokens->next_token;
+  }
+  return outCommStream;
+}
+
+
 
 command_stream_t
 make_command_stream (int (*get_next_byte) (void *),
@@ -383,6 +566,10 @@ make_command_stream (int (*get_next_byte) (void *),
   // Tokeninzing our commands
   tokenlist_t tokenlist_head = NULL;
   tokenlist_t tokenlist_end = NULL;
+
+
+  // Tokenizing the input
+  printf("Tokenizing input\n");
 
   int c;
   do {
@@ -422,10 +609,8 @@ make_command_stream (int (*get_next_byte) (void *),
         tokenlist_end = read_word(tokenlist_end, get_next_byte_argument, c);
         break;
     };
-
     if (tokenlist_head == NULL)
       tokenlist_head = tokenlist_end;
-  
   } while (c != EOF);
 
   printf("Finished tokenizing\n");
@@ -452,7 +637,11 @@ make_command_stream (int (*get_next_byte) (void *),
     } 
   } 
 
-  printf("Finished RPN Processing\n");
+  // RPN Parser to Command Stream
+  command_stream_t outStream = NULL;
+  outStream = rpnToCommTree(rpnTokens);
+
+  printf("Finished RPN to Command Stream\n");
   // error (1, 0, "command reading not yet implemented");
   return 0;
 }
