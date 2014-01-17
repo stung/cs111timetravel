@@ -427,27 +427,6 @@ ctnode_t ctPop(command_stream_t inCTStack) {
   return oldtop;
 }
 
-// Input: RPN Token
-// Output: pointer to command struct
-command_t tokToComm(tokenlist_t rpnToken) {
-  switch(rpnToken->comType) {
-    case WORD:
-    case NEWLINE:
-    case SUBSHELL:
-    case REDIRECT_MORE:
-    case REDIRECT_LESS:
-    case PIPE:
-    case AMPERSAND:
-    case OR:
-    case SEMICOLON:
-    default:
-      printf("Not a valid comType\n");
-      break;
-  }
-
-}
-
-
 // Input: token list of RPN tokens
 // Output: command stream of commands
 command_stream_t rpnToCommTree(tokenlist_t inRPNTokens) {
@@ -464,9 +443,26 @@ command_stream_t rpnToCommTree(tokenlist_t inRPNTokens) {
   while(inRPNTokens != NULL) {
     switch (inRPNTokens->comType) {
       case WORD:
-        // FIXME: Use a token to command function here
-        ctPush(outCommStream, command_t)
-        rpnTokens_end = insert_at_end(rpnTokens_end, inTokens->token);
+        readData->type = SIMPLE_COMMAND;
+        readData->status = -1;
+        readData->input = NULL;
+        readData->output = NULL;
+
+        int i = 0;
+        readData->u.word = (char *)malloc(sizeof(char *) * 20); //FIXME: CANNOT BE STATIC
+
+        while(inRPNTokens->comType == WORD) {
+          readData->u.(*(word + i)) = (char *)malloc(sizeof(char *) * 50);
+          memset(readData->u.(*(word + i)), 0, sizeof(char*) * 50); // FIXME: CANNOT BE STATIC
+
+          // Assume null terminated Strings
+          unsigned dataLength = strlen(inRPNTokens->token);
+          strncpy(readData->u.(*(word + i)), inRPNTokens->token, dataLength);
+
+          inRPNTokens = inRPNTokens->next_token;
+          i++;
+        }
+        ctPush(outCommStream, readData);
         break;
       case NEWLINE:
         if (operatorStack == NULL) {
@@ -512,6 +508,12 @@ command_stream_t rpnToCommTree(tokenlist_t inRPNTokens) {
         break;
       case PIPE:
       case AMPERSAND:
+        readData
+
+        = ctPop(outStream);
+        = ctPop(outStream);
+        ctPush(outStream, readData);
+        break;
       case OR:
         readNode = operatorStack->topNode;
         if (readNode == NULL) {
@@ -544,8 +546,6 @@ command_stream_t rpnToCommTree(tokenlist_t inRPNTokens) {
         printf("Not a valid comType\n");
         break;
     }
-    if (rpnTokens == NULL)
-      rpnTokens = rpnTokens_end;
     // Obtain next token
     inTokens = inTokens->next_token;
   }
