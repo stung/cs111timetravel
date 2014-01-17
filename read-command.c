@@ -126,6 +126,9 @@ tokenlist_t read_pipe (tokenlist_t tail, void *stream) {
 // input: tail of a linked list, character stream
 // output: tail of a linked list
 tokenlist_t read_newline (tokenlist_t tail) {
+  if (tail == NULL)
+	  return NULL;
+
   if ((tail->comType == OR) || (tail->comType == PIPE) || 
         (tail->comType == AMPERSAND) || (tail->comType == NEWLINE)) {
     return tail;
