@@ -127,7 +127,7 @@ tokenlist_t read_pipe (tokenlist_t tail, void *stream) {
 // output: tail of a linked list
 tokenlist_t read_newline (tokenlist_t tail) {
   if ((tail->comType == OR) || (tail->comType == PIPE) || 
-        (tail->comType == AMPERSAND)) {
+        (tail->comType == AMPERSAND) || (tail->comType == NEWLINE)) {
     return tail;
   } else {
     tokenlist_t tmp = NULL; //(tokenlist_t)malloc(sizeof(struct token_list));
@@ -152,6 +152,15 @@ tokenlist_t read_word (tokenlist_t tail, void *stream, int c) {
 
   int nextchar;
   nextchar = getc(stream);
+
+  // check if it's a comment, ignore them until new line
+  if (c == '#') {
+	 while(nextchar != '\n') {
+        nextchar = getc(stream);
+	 }
+	 return read_newline(tail);
+  }
+  
   char shouldExit = 0;
   while (nextchar != EOF && !shouldExit) {
     switch (nextchar) {
@@ -163,17 +172,17 @@ tokenlist_t read_word (tokenlist_t tail, void *stream, int c) {
       case '&':
       case '|':
       case '\n':
-    	case ' ':
+    	 case ' ':
       case '\t':
-  	  case EOF:
-       ungetc(nextchar, stream);
-	     shouldExit = 1;
-	     break;
+      case EOF:
+        ungetc(nextchar, stream);
+        shouldExit = 1;
+        break;
       default:
-       sprintf(appendchar, "%c", nextchar);
-       strcat(newtoken, appendchar);
-       nextchar = getc(stream);
-	     break;
+        sprintf(appendchar, "%c", nextchar);
+        strcat(newtoken, appendchar);
+        nextchar = getc(stream);
+        break;
     }
   }
   tmp = insert_at_end(tail, newtoken); 
@@ -433,6 +442,8 @@ make_command_stream (int (*get_next_byte) (void *),
   tokenlist_t rpnTokens = NULL;
   rpnTokens = inToRPN(tokenlist_head);
 
+  printf("Finished RPN\n");
+  
   if (DEBUG) {
     tokenlist_t rpnTest = rpnTokens;
     while(rpnTest != NULL) {
@@ -442,7 +453,6 @@ make_command_stream (int (*get_next_byte) (void *),
   } 
 
   printf("Finished RPN Processing\n");
-
   // error (1, 0, "command reading not yet implemented");
   return 0;
 }
