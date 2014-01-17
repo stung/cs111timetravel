@@ -27,19 +27,19 @@ enum parse_type
   WORD,
 };
 
-struct token_list
+struct token_node
 {
-  enum parse_type comType;
   char *token;
-  struct token_list *next_token;
+  enum parse_type comType;
+  struct token_node *next_token;
 };
 
-typedef struct token_list *tokenlist_t;
+typedef struct token_node *token_node_t;
 
 // inputs: tail of a linked list, string data
 // output: pointer to the tail of the linked list
-tokenlist_t insert_at_end (tokenlist_t oldtail, char *data, enum parse_type comType) {
-  tokenlist_t newtail = (tokenlist_t)malloc(sizeof(struct token_list)); 
+token_node_t insert_at_end (token_node_t oldtail, char *data, enum parse_type comType) {
+  token_node_t newtail = (token_node_t)malloc(sizeof(struct token_node)); 
 
   // Assume data is a null-terminated String
   unsigned strlength = strlen(data);
@@ -55,11 +55,11 @@ tokenlist_t insert_at_end (tokenlist_t oldtail, char *data, enum parse_type comT
 
 // input: tail of a linked list, special character
 // output: tail of a linked list
-tokenlist_t read_singlespecial (tokenlist_t tail, int c) {
+token_node_t read_singlespecial (token_node_t tail, int c) {
   char token[2];
   memset(token, '\0', sizeof(token));
   sprintf(token, "%c", c);
-  tokenlist_t tmp = (tokenlist_t)malloc(sizeof(struct token_list));
+  token_node_t tmp = (token_node_t)malloc(sizeof(struct token_node));
   //tmp = insert_at_end(tail, token);
   switch (c) {
     case ';':
@@ -83,10 +83,10 @@ tokenlist_t read_singlespecial (tokenlist_t tail, int c) {
 
 // input: tail of a linked list, character stream
 // output: tail of a linked list
-tokenlist_t read_ampersand (tokenlist_t tail, void *stream) {
+token_node_t read_ampersand (token_node_t tail, void *stream) {
   int c;
   c = getc(stream);
-  tokenlist_t tmp = (tokenlist_t)malloc(sizeof(struct token_list));
+  token_node_t tmp = (token_node_t)malloc(sizeof(struct token_node));
   if (c == '&') {
     char *token = "&&";
     tmp = insert_at_end(tail, token, AMPERSAND);
@@ -101,10 +101,10 @@ tokenlist_t read_ampersand (tokenlist_t tail, void *stream) {
 
 // input: tail of a linked list, character stream
 // output: tail of a linked list
-tokenlist_t read_pipe (tokenlist_t tail, void *stream) {
+token_node_t read_pipe (token_node_t tail, void *stream) {
   int c;
   c = getc(stream);
-  tokenlist_t tmp = (tokenlist_t)malloc(sizeof(struct token_list));
+  token_node_t tmp = (token_node_t)malloc(sizeof(struct token_node));
   if (c == '|') {
     char *token = "||";
     tmp = insert_at_end(tail, token, OR);
@@ -119,7 +119,7 @@ tokenlist_t read_pipe (tokenlist_t tail, void *stream) {
 
 // input: tail of a linked list, character stream
 // output: tail of a linked list
-tokenlist_t read_newline (tokenlist_t tail) {
+token_node_t read_newline (token_node_t tail) {
   if (tail == NULL)
 	  return NULL;
 
@@ -127,7 +127,7 @@ tokenlist_t read_newline (tokenlist_t tail) {
         (tail->comType == AMPERSAND) || (tail->comType == NEWLINE)) {
     return tail;
   } else {
-    tokenlist_t tmp = NULL; //(tokenlist_t)malloc(sizeof(struct token_list));
+    token_node_t tmp = NULL; //(token_node_t)malloc(sizeof(struct token_node));
     char *token = "\n";
     tmp = insert_at_end(tail, token, NEWLINE);
     return tmp;
@@ -136,10 +136,10 @@ tokenlist_t read_newline (tokenlist_t tail) {
 
 // input: tail of a linked list, character stream, read character
 // output: tail of a linked list
-tokenlist_t read_word (tokenlist_t tail, void *stream, int c) {
+token_node_t read_word (token_node_t tail, void *stream, int c) {
   char newtoken[100]; //FIXME: CANNOT BE STATIC
   memset(newtoken, '\0', sizeof(newtoken));
-  tokenlist_t tmp = (tokenlist_t)malloc(sizeof(struct token_list));
+  token_node_t tmp = (token_node_t)malloc(sizeof(struct token_node));
 
   char appendchar[2];
   memset(appendchar, '\0', sizeof(appendchar));
@@ -185,12 +185,12 @@ tokenlist_t read_word (tokenlist_t tail, void *stream, int c) {
   return tmp;
 }
 
-tokenlist_t intoTokens(int (*get_next_byte) (void *),
+token_node_t intoTokens(int (*get_next_byte) (void *),
          void *get_next_byte_argument) {
 
   // Tokeninzing our commands
-  tokenlist_t tokenlist_head = NULL;
-  tokenlist_t tokenlist_end = tokenlist_head;
+  token_node_t tokenlist_head = NULL;
+  token_node_t tokenlist_end = tokenlist_head;
 
   int c;
   while((c = get_next_byte(get_next_byte_argument)) != EOF) {
@@ -229,7 +229,7 @@ tokenlist_t intoTokens(int (*get_next_byte) (void *),
 // STACK IMPLEMENTATION
 struct stack
 {
-  struct token_list *topNode;
+  struct token_node *topNode;
 };
 
 typedef struct stack *stack_t;
@@ -237,8 +237,7 @@ typedef struct stack *stack_t;
 // Input: Stack pointer, String data to be new top
 // Output: void
 void push(stack_t theStack, char* data, enum parse_type type) {
-//  stacknode_t newtop = (stacknode_t)malloc(sizeof(struct stack_node));
-  tokenlist_t newtop = (tokenlist_t)malloc(sizeof(struct token_list));
+  token_node_t newtop = (token_node_t)malloc(sizeof(struct token_node));
 
   // Assume data is a null-terminated String
   unsigned strlength = strlen(data);
@@ -250,15 +249,15 @@ void push(stack_t theStack, char* data, enum parse_type type) {
     theStack = (stack_t)malloc(sizeof(struct stack));
   else
     newtop->next_token = theStack->topNode;
+  
   theStack->topNode = newtop;
-  return;
 }
 
 // Input: Stack pointer
 // Output: Stack Node pointer
-tokenlist_t pop(stack_t theStack) {
-  tokenlist_t newtop = NULL;
-  tokenlist_t oldtop = NULL;
+token_node_t pop(stack_t theStack) {
+  token_node_t newtop = NULL;
+  token_node_t oldtop = NULL;
 
   // Rearranging the new top node
   if (theStack == NULL) {
@@ -283,15 +282,15 @@ tokenlist_t pop(stack_t theStack) {
   return oldtop;
 }
 
-tokenlist_t inToRPN(tokenlist_t inTokens) {
-  tokenlist_t rpnTokens = NULL; // (tokenlist_t)malloc(sizeof(struct token_list));
-  tokenlist_t rpnTokens_end = rpnTokens;
+token_node_t inToRPN(token_node_t inTokens) {
+  token_node_t rpnTokens = NULL; // (token_node_t)malloc(sizeof(struct token_node));
+  token_node_t rpnTokens_end = rpnTokens;
 
   stack_t operatorStack = (stack_t)malloc(sizeof(struct stack));
   memset(operatorStack, 0, sizeof(struct stack));
 
-  tokenlist_t readNode = (tokenlist_t)malloc(sizeof(struct token_list));
-  memset(readNode, 0, sizeof(struct token_list));
+  token_node_t readNode = (token_node_t)malloc(sizeof(struct token_node));
+  memset(readNode, 0, sizeof(struct token_node));
 
   char rpn[100]; //FIXME: CANNOT BE STATIC
   memset(rpn, '\0', sizeof(rpn));
@@ -410,13 +409,13 @@ make_command_stream (int (*get_next_byte) (void *),
      You can also use external functions defined in the GNU C Library.  */
 
   // Parsing file to token list
-  tokenlist_t tokenlist_head = NULL;
+  token_node_t tokenlist_head = NULL;
   tokenlist_head = intoTokens(get_next_byte, get_next_byte_argument);
 
   printf("Finished tokenizing\n");
   
   if (DEBUG) {
-    tokenlist_t test = tokenlist_head;
+    token_node_t test = tokenlist_head;
     while(test != NULL) {
       printf("%s ", test->token);
       test = test->next_token;
@@ -424,13 +423,13 @@ make_command_stream (int (*get_next_byte) (void *),
   }
 
   // Parsing infix into RPN
-  tokenlist_t rpnTokens = NULL;
+  token_node_t rpnTokens = NULL;
   rpnTokens = inToRPN(tokenlist_head);
 
   printf("Finished RPN\n");
   
   if (DEBUG) {
-    tokenlist_t rpnTest = rpnTokens;
+    token_node_t rpnTest = rpnTokens;
     while(rpnTest != NULL) {
       printf("%s ", rpnTest->token);
       rpnTest = rpnTest->next_token;
