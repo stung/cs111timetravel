@@ -336,6 +336,17 @@ token_node_t inToRPN(token_node_t inTokens) {
         rpnTokens_end = insert_at_end(rpnTokens_end, inTokens->token, inTokens->comType);
         break;
       case PIPE:
+        readNode = operatorStack->topNode;
+        if (readNode == NULL) {
+          push(operatorStack, inTokens->token, inTokens->comType);
+        } else if (strcmp(readNode->token, "|") == 0) {
+          readNode = pop(operatorStack);
+          rpnTokens_end = insert_at_end(rpnTokens_end, readNode->token, readNode->comType);
+          push(operatorStack, inTokens->token, inTokens->comType);
+        } else {
+          push(operatorStack, inTokens->token, inTokens->comType);
+	   }
+        break;
       case AMPERSAND:
       case OR:
         readNode = operatorStack->topNode;
@@ -345,7 +356,16 @@ token_node_t inToRPN(token_node_t inTokens) {
           push(operatorStack, inTokens->token, inTokens->comType);
         } else if (strcmp(readNode->token, "(") == 0) {
           push(operatorStack, inTokens->token, inTokens->comType);
-        } else {
+        } else if (strcmp(readNode->token, "|") == 0) {
+          while ((readNode = pop(operatorStack)) != NULL) {
+            rpnTokens_end = insert_at_end(rpnTokens_end, readNode->token, readNode->comType);
+            if ((strcmp(readNode->token, "(") == 0) || (strcmp(readNode->token, ";") == 0)) {
+		    push(operatorStack, readNode->token, readNode->comType);
+              break;
+		  }
+          }
+		push(operatorStack, inTokens->token, inTokens->comType);
+	   } else {
           readNode = pop(operatorStack);
           rpnTokens_end = insert_at_end(rpnTokens_end, readNode->token, readNode->comType);
           push(operatorStack, inTokens->token, inTokens->comType);
@@ -488,41 +508,11 @@ command_stream_t rpnToCommTree(token_node_t inRPNTokens) {
         ctPush(outCommStream, readData);
         break;
       case NEWLINE:
-        // if (operatorStack == NULL) {
-        //   rpnTokens_end = insert_at_end(rpnTokens_end, inTokens->token);
-        //   break;
-        // }
-        // while (operatorStack->topNode != NULL) {
-        //   readNode = pop(operatorStack);
-        //   rpnTokens_end = insert_at_end(rpnTokens_end, readNode->stackdata);
-        // }
-        // rpnTokens_end = insert_at_end(rpnTokens_end, inTokens->token);
-        break;
+        //FIXME
+	   break;
       case SUBSHELL:
-        // if (strcmp(inTokens->token, "(") == 0) {
-        //   push(operatorStack, inTokens->token);
-        //   break;
-        // } else {
-        //   readNode = pop(operatorStack);
-        //   if (readNode == NULL)
-        //     break;
-        //   else {
-        //     rpnTokens_end = insert_at_end(rpnTokens_end, readNode->stackdata);
-
-        //     // pop all the way until you hit the open paren in the stack
-        //     while (strcmp(readNode->stackdata, "(") != 0) {
-        //       readNode = pop(operatorStack);
-        //       if (readNode != NULL)
-        //         rpnTokens_end = insert_at_end(rpnTokens_end, readNode->stackdata);
-        //       else {
-        //         break;
-        //       }
-        //     }
-        //     break;
-        //   }
-        //   break;
-        // }
-        break;
+        //FIXME
+	   break;
       case REDIRECT_MORE:
         inRPNTokens = inRPNTokens->next_token;
         ctnode_t outputnode = NULL;
