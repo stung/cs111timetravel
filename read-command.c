@@ -616,16 +616,15 @@ make_command_stream (int (*get_next_byte) (void *),
   outStream = rpnToCommTree(rpnTokens);
 
   printf("Finished RPN to Command Stream\n");
-  // error (1, 0, "command reading not yet implemented");
-  return 0;
+  return outStream;
 }
 
 command_t
 read_command_stream (command_stream_t s)
 {
-  s;
-  /* FIXME: Replace this with your implementation too.  */
-
-  error (1, 0, "command reading not yet implemented");
-  return 0;
+  command_t outCommand = NULL;
+  ctnode_t outNode = NULL;
+  outNode = ctPop(s);
+  outCommand = outNode->currCommand;
+  return outCommand;
 }
