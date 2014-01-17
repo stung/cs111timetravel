@@ -527,7 +527,7 @@ command_stream_t rpnToCommTree(token_node_t inRPNTokens) {
         // rpnTokens_end = insert_at_end(rpnTokens_end, inTokens->token);
         break;
       case REDIRECT_LESS:
-        // rpnTokens_end = insert_at_end(rpnTokens_end, inTokens->token);
+	   // rpnTokens_end = insert_at_end(rpnTokens_end, inTokens->token);
         break;
       case PIPE:
       case AMPERSAND:
@@ -542,7 +542,7 @@ command_stream_t rpnToCommTree(token_node_t inRPNTokens) {
         int j = 0;
         while (j < 2) {
           subCommand = ctPop(outCommStream);
-          readData->u.command[j] = subCommand->currCommand;
+          readData->u.command[1 - j] = subCommand->currCommand;
           j++;
         }
 
