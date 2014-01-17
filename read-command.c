@@ -315,7 +315,7 @@ token_node_t inToRPN(token_node_t inTokens) {
         if (strcmp(inTokens->token, "(") == 0) {
           push(operatorStack, inTokens->token, inTokens->comType);
         } else {
-          while ((readNode = pop(operatorStack) != NULL)) {
+          while ((readNode = pop(operatorStack)) != NULL) {
             rpnTokens_end = insert_at_end(rpnTokens_end, readNode->token, readNode->comType);
             if (strcmp(readNode->token, "(") == 0)
               break;
