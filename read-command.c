@@ -325,7 +325,9 @@ tokenlist_t inToRPN(tokenlist_t inTokens) {
             rpnTokens_end = insert_at_end(rpnTokens_end, inTokens->token);
             break;
           }
-          while (operatorStack->topNode != NULL) {
+          readNode = operatorStack->topNode;
+          while ((readNode != NULL) && 
+                  (strcmp(readNode->stackdata, "(") != 0)) {
             readNode = pop(operatorStack);
             rpnTokens_end = insert_at_end(rpnTokens_end, readNode->stackdata);
           }
@@ -426,7 +428,7 @@ make_command_stream (int (*get_next_byte) (void *),
       test = test->next_token;
     }
   }
-  
+
   // Parsing infix into RPN
   tokenlist_t rpnTokens = NULL;
   rpnTokens = inToRPN(tokenlist_head);
@@ -439,7 +441,7 @@ make_command_stream (int (*get_next_byte) (void *),
     } 
   } 
 
-
+  printf("Finished RPN Processing\n");
 
   // error (1, 0, "command reading not yet implemented");
   return 0;
