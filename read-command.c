@@ -196,24 +196,15 @@ tokenlist_t intoTokens(int (*get_next_byte) (void *),
 
   // Tokeninzing our commands
   tokenlist_t tokenlist_head = NULL;
-  tokenlist_t tokenlist_end = NULL;
+  tokenlist_t tokenlist_end = tokenlist_head;
 
   int c;
-  do {
-    c = get_next_byte(get_next_byte_argument);
+  while((c = get_next_byte(get_next_byte_argument)) != EOF) {
     switch (c) {
       case ';':
-        tokenlist_end = read_singlespecial(tokenlist_end, c);
-        break;
       case '(':
-        tokenlist_end = read_singlespecial(tokenlist_end, c);
-        break;
       case ')':
-        tokenlist_end = read_singlespecial(tokenlist_end, c);
-        break;
       case '<':
-        tokenlist_end = read_singlespecial(tokenlist_end, c);
-        break;
       case '>':
         tokenlist_end = read_singlespecial(tokenlist_end, c);
         break;
@@ -227,21 +218,17 @@ tokenlist_t intoTokens(int (*get_next_byte) (void *),
         tokenlist_end = read_newline(tokenlist_end);
         break;
       case ' ':
-        break;
       case '\t':
-        break;
-    	case EOF:
+    	 case EOF:
     	  break;
-    	default:
+    	 default:
         tokenlist_end = read_word(tokenlist_end, get_next_byte_argument, c);
         break;
     };
 
     if (tokenlist_head == NULL)
       tokenlist_head = tokenlist_end;
-  
-  } while (c != EOF);
-
+  } 
   return tokenlist_head;
 }
 
