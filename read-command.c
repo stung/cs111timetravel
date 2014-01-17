@@ -181,6 +181,13 @@ token_node_t read_word (token_node_t tail, void *stream, int c) {
         break;
     }
   }
+  if (tail != NULL) {
+    if (tail->comType == WORD) {
+  	  tail->token = strcat(tail->token, " ");
+  	  tail->token = strcat(tail->token, newtoken);
+	  return tail;
+    }
+  }
   tmp = insert_at_end(tail, newtoken, WORD); 
   return tmp;
 }
@@ -451,7 +458,9 @@ command_stream_t rpnToCommTree(token_node_t inRPNTokens) {
   command_t readData = (command_t)malloc(sizeof(struct command));
   memset(readData, 0, sizeof(struct command));
 
+	  printf("start rpn to comm tree\n");
   while(inRPNTokens != NULL) {
+	  printf("%s\n", inRPNTokens->token);
     switch (inRPNTokens->comType) {
       case WORD:
         readData->type = SIMPLE_COMMAND;
@@ -461,16 +470,19 @@ command_stream_t rpnToCommTree(token_node_t inRPNTokens) {
 
         int i = 0;
         readData->u.word = (char **)malloc(sizeof(char **) * 20); //FIXME: CANNOT BE STATIC
+        
+	   char *tok = NULL;
+	   tok = strtok(inRPNTokens->token, " ");
 
-        while(inRPNTokens->comType == WORD) {
+        while(tok) {
           *(readData->u.word + i) = (char *)malloc(sizeof(char *) * 50);
           memset(*(readData->u.word + i), 0, sizeof(char*) * 50); // FIXME: CANNOT BE STATIC
 
           // Assume null terminated Strings
-          unsigned dataLength = strlen(inRPNTokens->token);
-          strncpy(*(readData->u.word + i), inRPNTokens->token, dataLength);
+          unsigned dataLength = strlen(tok);
+          strncpy(*(readData->u.word + i), tok, dataLength);
 
-          inRPNTokens = inRPNTokens->next_token;
+          tok = strtok(NULL, " ");
           i++;
         }
         ctPush(outCommStream, readData);
@@ -555,6 +567,7 @@ command_stream_t rpnToCommTree(token_node_t inRPNTokens) {
     }
     // Obtain next token
     inRPNTokens = inRPNTokens->next_token;
+	 // printf("%s\n", inRPNTokens->token);
   }
   return outCommStream;
 }
@@ -611,6 +624,8 @@ read_command_stream (command_stream_t s)
   command_t outCommand = NULL;
   ctnode_t outNode = NULL;
   outNode = ctPop(s);
+  if (outNode == NULL)
+	  return outCommand;
   outCommand = outNode->currCommand;
   return outCommand;
 }
