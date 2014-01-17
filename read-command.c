@@ -9,7 +9,7 @@
 #include <string.h>
 #include <error.h>
 
-#define DEBUG 1
+#define DEBUG 0
 
 /* FIXME: You may need to add #include directives, macro definitions,
    static function definitions, etc.  */
@@ -268,14 +268,14 @@ token_node_t pop(stack_t theStack) {
 
   // Rearranging the new top node
   if (theStack == NULL) {
-    printf("ERROR: Stack is NULL!\n");
+    //printf("ERROR: Stack is NULL!\n");
     return oldtop;
   }
 
   // The old top will be the stack's current top node
   oldtop = theStack->topNode;
   if (oldtop == NULL) {
-    printf("ERROR: Nothing in stack!\n");
+    //printf("ERROR: Nothing in stack!\n");
     return oldtop;
   }
 
@@ -386,7 +386,7 @@ token_node_t inToRPN(token_node_t inTokens) {
           rpnTokens_end = insert_at_end(rpnTokens_end, inTokens->token, inTokens->comType);
         break;
       default:
-        printf("Not a valid comType?\n");
+        //printf("Not a valid comType?\n");
         break;
     }
     if (rpnTokens == NULL)
@@ -446,14 +446,14 @@ ctnode_t ctPop(command_stream_t inCTStack) {
 
   // Rearranging the new top node
   if (inCTStack == NULL) {
-    printf("ERROR: Stack is NULL!\n");
+    //printf("ERROR: Stack is NULL!\n");
     return oldtop;
   }
 
   // The old top will be the stack's current top node
   oldtop = inCTStack->topNode;
   if (oldtop == NULL) {
-    printf("ERROR: Nothing in stack!\n");
+    //printf("ERROR: Nothing in stack!\n");
     return oldtop;
   }
 
@@ -478,9 +478,7 @@ command_stream_t rpnToCommTree(token_node_t inRPNTokens) {
   command_t readData = (command_t)malloc(sizeof(struct command));
   memset(readData, 0, sizeof(struct command));
 
-	  printf("start rpn to comm tree\n");
   while(inRPNTokens != NULL) {
-	  printf("%s\n", inRPNTokens->token);
     switch (inRPNTokens->comType) {
       case WORD:
         readData->type = SIMPLE_COMMAND;
@@ -594,7 +592,7 @@ make_command_stream (int (*get_next_byte) (void *),
   token_node_t tokenlist_head = NULL;
   tokenlist_head = intoTokens(get_next_byte, get_next_byte_argument);
 
-  printf("Finished tokenizing\n");
+  //printf("Finished tokenizing\n");
   
   if (DEBUG) {
     token_node_t test = tokenlist_head;
@@ -608,7 +606,7 @@ make_command_stream (int (*get_next_byte) (void *),
   token_node_t rpnTokens = NULL;
   rpnTokens = inToRPN(tokenlist_head);
 
-  printf("Finished RPN\n");
+  //printf("Finished RPN\n");
   
   if (DEBUG) {
     token_node_t rpnTest = rpnTokens;
@@ -622,7 +620,7 @@ make_command_stream (int (*get_next_byte) (void *),
   command_stream_t outStream = NULL;
   outStream = rpnToCommTree(rpnTokens);
 
-  printf("Finished RPN to Command Stream\n");
+  //printf("Finished RPN to Command Stream\n");
   return outStream;
 }
 
