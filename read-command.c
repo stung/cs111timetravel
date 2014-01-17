@@ -456,7 +456,7 @@ ctnode_t ctPop(command_stream_t inCTStack) {
 
 // Input: token list of RPN tokens
 // Output: command stream of commands
-command_stream_t rpnToCommTree(tokenlist_t inRPNTokens) {
+command_stream_t rpnToCommTree(token_node_t inRPNTokens) {
   command_stream_t outCommStream =
         (command_stream_t)malloc(sizeof(struct command_stream));
   memset(outCommStream, 0, sizeof(struct command_stream));
