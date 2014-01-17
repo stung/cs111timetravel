@@ -314,26 +314,12 @@ token_node_t inToRPN(token_node_t inTokens) {
       case SUBSHELL:
         if (strcmp(inTokens->token, "(") == 0) {
           push(operatorStack, inTokens->token, inTokens->comType);
-          break;
         } else {
-          readNode = pop(operatorStack);
-          if (readNode == NULL)
-            break;
-          else {
+          while ((readNode = pop(operatorStack) != NULL)) {
             rpnTokens_end = insert_at_end(rpnTokens_end, readNode->token, readNode->comType);
-
-            // pop all the way until you hit the open paren in the stack
-            while (strcmp(readNode->token, "(") != 0) {
-              readNode = pop(operatorStack);
-              if (readNode != NULL)
-                rpnTokens_end = insert_at_end(rpnTokens_end, readNode->token, readNode->comType);
-              else {
-                break;
-              }
-            }
-            break;
+            if (strcmp(readNode->token, "(") == 0)
+              break;
           }
-          break;
         }
         break;
       case REDIRECT_MORE:
