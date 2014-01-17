@@ -38,7 +38,7 @@ typedef struct token_list *tokenlist_t;
 
 // inputs: tail of a linked list, string data
 // output: pointer to the tail of the linked list
-tokenlist_t insert_at_end (tokenlist_t oldtail, char *data) {
+tokenlist_t insert_at_end (tokenlist_t oldtail, char *data, enum parse_type comType) {
   tokenlist_t newtail = (tokenlist_t)malloc(sizeof(struct token_list)); 
 
   // Assume data is a null-terminated String
@@ -49,7 +49,7 @@ tokenlist_t insert_at_end (tokenlist_t oldtail, char *data) {
   if (oldtail != NULL)
     oldtail->next_token = newtail;
   newtail->next_token = NULL;
-  // printf("Data inserted was %s\n", newtail->token);
+  newtail->comType = comType;
   return newtail;
 }
 
@@ -60,22 +60,20 @@ tokenlist_t read_singlespecial (tokenlist_t tail, int c) {
   memset(token, '\0', sizeof(token));
   sprintf(token, "%c", c);
   tokenlist_t tmp = (tokenlist_t)malloc(sizeof(struct token_list));
-  tmp = insert_at_end(tail, token);
+  //tmp = insert_at_end(tail, token);
   switch (c) {
     case ';':
-      tmp->comType = SEMICOLON;
+      tmp = insert_at_end(tail, token, SEMICOLON);
       break;
     case '(':
-      tmp->comType = SUBSHELL;
-      break;
     case ')':
-      tmp->comType = SUBSHELL;
+      tmp = insert_at_end(tail, token, SUBSHELL);
       break;
     case '<':
-      tmp->comType = REDIRECT_LESS;
+      tmp = insert_at_end(tail, token, REDIRECT_LESS);
       break;
     case '>':
-      tmp->comType = REDIRECT_MORE;
+      tmp = insert_at_end(tail, token, REDIRECT_MORE);
       break;
     default:
       break;
@@ -91,14 +89,12 @@ tokenlist_t read_ampersand (tokenlist_t tail, void *stream) {
   tokenlist_t tmp = (tokenlist_t)malloc(sizeof(struct token_list));
   if (c == '&') {
     char *token = "&&";
-    tmp = insert_at_end(tail, token);
-    tmp->comType = AMPERSAND;
+    tmp = insert_at_end(tail, token, AMPERSAND);
   } else {
     // push the char back onto the stream
     ungetc(c, stream);
     char *token = "&";
-    tmp = insert_at_end(tail, token);
-    tmp->comType = WORD;
+    tmp = insert_at_end(tail, token, WORD);
   }
   return tmp;
 }
@@ -111,14 +107,12 @@ tokenlist_t read_pipe (tokenlist_t tail, void *stream) {
   tokenlist_t tmp = (tokenlist_t)malloc(sizeof(struct token_list));
   if (c == '|') {
     char *token = "||";
-    tmp = insert_at_end(tail, token);
-    tmp->comType = OR;
+    tmp = insert_at_end(tail, token, OR);
   } else {
     // push the char back onto the stream
     ungetc(c, stream);
     char *token = "|";
-    tmp = insert_at_end(tail, token);
-    tmp->comType = PIPE;
+    tmp = insert_at_end(tail, token, PIPE);
   }
   return tmp;
 }
@@ -135,8 +129,7 @@ tokenlist_t read_newline (tokenlist_t tail) {
   } else {
     tokenlist_t tmp = NULL; //(tokenlist_t)malloc(sizeof(struct token_list));
     char *token = "\n";
-    tmp = insert_at_end(tail, token);
-    tmp->comType = NEWLINE;
+    tmp = insert_at_end(tail, token, NEWLINE);
     return tmp;
   }
 }
@@ -188,9 +181,7 @@ tokenlist_t read_word (tokenlist_t tail, void *stream, int c) {
         break;
     }
   }
-  tmp = insert_at_end(tail, newtoken); 
-  tmp->comType = WORD;
-  // printf("Storing %s\n", newtoken);
+  tmp = insert_at_end(tail, newtoken, WORD); 
   return tmp;
 }
 
@@ -236,43 +227,38 @@ tokenlist_t intoTokens(int (*get_next_byte) (void *),
 }
 
 // STACK IMPLEMENTATION
-struct stack_node
-{
-  char *stackdata;
-  struct stack_node *next_node;
-};
-
 struct stack
 {
-  struct stack_node *topNode;
+  struct token_list *topNode;
 };
 
-typedef struct stack_node *stacknode_t;
 typedef struct stack *stack_t;
 
 // Input: Stack pointer, String data to be new top
 // Output: void
-void push(stack_t theStack, char* data) {
-  stacknode_t newtop = (stacknode_t)malloc(sizeof(struct stack_node));
+void push(stack_t theStack, char* data, enum parse_type type) {
+//  stacknode_t newtop = (stacknode_t)malloc(sizeof(struct stack_node));
+  tokenlist_t newtop = (tokenlist_t)malloc(sizeof(struct token_list));
 
   // Assume data is a null-terminated String
   unsigned strlength = strlen(data);
-  newtop->stackdata = (char *)malloc(sizeof(char) * strlength);
-  strncpy(newtop->stackdata, data, strlength);
+  newtop->token = (char *)malloc(sizeof(char) * strlength);
+  strncpy(newtop->token, data, strlength);
+  newtop->comType = type;
 
   if (theStack == NULL)
     theStack = (stack_t)malloc(sizeof(struct stack));
   else
-    newtop->next_node = theStack->topNode;
+    newtop->next_token = theStack->topNode;
   theStack->topNode = newtop;
   return;
 }
 
 // Input: Stack pointer
 // Output: Stack Node pointer
-stacknode_t pop(stack_t theStack) {
-  stacknode_t newtop = NULL;
-  stacknode_t oldtop = NULL;
+tokenlist_t pop(stack_t theStack) {
+  tokenlist_t newtop = NULL;
+  tokenlist_t oldtop = NULL;
 
   // Rearranging the new top node
   if (theStack == NULL) {
@@ -289,8 +275,8 @@ stacknode_t pop(stack_t theStack) {
 
   // The new top is the node below the top node
   // Set the old top's next node pointer to NULL for safety
-  newtop = oldtop->next_node;
-  oldtop->next_node = NULL;
+  newtop = oldtop->next_token;
+  oldtop->next_token = NULL;
 
   // Updating the stack's top node to be the new top
   theStack->topNode = newtop;
@@ -304,8 +290,8 @@ tokenlist_t inToRPN(tokenlist_t inTokens) {
   stack_t operatorStack = (stack_t)malloc(sizeof(struct stack));
   memset(operatorStack, 0, sizeof(struct stack));
 
-  stacknode_t readNode = (stacknode_t)malloc(sizeof(struct stack_node));
-  memset(readNode, 0, sizeof(struct stack_node));
+  tokenlist_t readNode = (tokenlist_t)malloc(sizeof(struct token_list));
+  memset(readNode, 0, sizeof(struct token_list));
 
   char rpn[100]; //FIXME: CANNOT BE STATIC
   memset(rpn, '\0', sizeof(rpn));
@@ -313,35 +299,35 @@ tokenlist_t inToRPN(tokenlist_t inTokens) {
   while(inTokens != NULL) {
     switch (inTokens->comType) {
       case WORD:
-        rpnTokens_end = insert_at_end(rpnTokens_end, inTokens->token);
+        rpnTokens_end = insert_at_end(rpnTokens_end, inTokens->token, inTokens->comType);
         break;
       case NEWLINE:
         if (operatorStack == NULL) {
-          rpnTokens_end = insert_at_end(rpnTokens_end, inTokens->token);
+          rpnTokens_end = insert_at_end(rpnTokens_end, inTokens->token, inTokens->comType);
           break;
         }
         while (operatorStack->topNode != NULL) {
           readNode = pop(operatorStack);
-          rpnTokens_end = insert_at_end(rpnTokens_end, readNode->stackdata);
+          rpnTokens_end = insert_at_end(rpnTokens_end, readNode->token, readNode->comType);
         }
-        rpnTokens_end = insert_at_end(rpnTokens_end, inTokens->token);
+        rpnTokens_end = insert_at_end(rpnTokens_end, inTokens->token, inTokens->comType);
         break;
       case SUBSHELL:
         if (strcmp(inTokens->token, "(") == 0) {
-          push(operatorStack, inTokens->token);
+          push(operatorStack, inTokens->token, inTokens->comType);
           break;
         } else {
           readNode = pop(operatorStack);
           if (readNode == NULL)
             break;
           else {
-            rpnTokens_end = insert_at_end(rpnTokens_end, readNode->stackdata);
+            rpnTokens_end = insert_at_end(rpnTokens_end, readNode->token, readNode->comType);
 
             // pop all the way until you hit the open paren in the stack
-            while (strcmp(readNode->stackdata, "(") != 0) {
+            while (strcmp(readNode->token, "(") != 0) {
               readNode = pop(operatorStack);
               if (readNode != NULL)
-                rpnTokens_end = insert_at_end(rpnTokens_end, readNode->stackdata);
+                rpnTokens_end = insert_at_end(rpnTokens_end, readNode->token, readNode->comType);
               else {
                 break;
               }
@@ -352,39 +338,39 @@ tokenlist_t inToRPN(tokenlist_t inTokens) {
         }
         break;
       case REDIRECT_MORE:
-        rpnTokens_end = insert_at_end(rpnTokens_end, inTokens->token);
+        rpnTokens_end = insert_at_end(rpnTokens_end, inTokens->token, inTokens->comType);
         break;
       case REDIRECT_LESS:
-        rpnTokens_end = insert_at_end(rpnTokens_end, inTokens->token);
+        rpnTokens_end = insert_at_end(rpnTokens_end, inTokens->token, inTokens->comType);
         break;
       case PIPE:
       case AMPERSAND:
       case OR:
         readNode = operatorStack->topNode;
         if (readNode == NULL) {
-          push(operatorStack, inTokens->token);
-        } else if (strcmp(readNode->stackdata, ";") == 0) {
-          push(operatorStack, inTokens->token);
-        } else if (strcmp(readNode->stackdata, "(") == 0) {
-          push(operatorStack, inTokens->token);
+          push(operatorStack, inTokens->token, inTokens->comType);
+        } else if (strcmp(readNode->token, ";") == 0) {
+          push(operatorStack, inTokens->token, inTokens->comType);
+        } else if (strcmp(readNode->token, "(") == 0) {
+          push(operatorStack, inTokens->token, inTokens->comType);
         } else {
           readNode = pop(operatorStack);
-          rpnTokens_end = insert_at_end(rpnTokens_end, readNode->stackdata);
-          push(operatorStack, inTokens->token);
+          rpnTokens_end = insert_at_end(rpnTokens_end, readNode->token, readNode->comType);
+          push(operatorStack, inTokens->token, inTokens->comType);
         }
         break;
       case SEMICOLON:
         if (operatorStack == NULL) {
-            rpnTokens_end = insert_at_end(rpnTokens_end, inTokens->token);
+            rpnTokens_end = insert_at_end(rpnTokens_end, inTokens->token, inTokens->comType);
             break;
           }
           readNode = operatorStack->topNode;
           while ((readNode != NULL) && 
-                  (strcmp(readNode->stackdata, "(") != 0)) {
+                  (strcmp(readNode->token, "(") != 0)) {
             readNode = pop(operatorStack);
-            rpnTokens_end = insert_at_end(rpnTokens_end, readNode->stackdata);
+            rpnTokens_end = insert_at_end(rpnTokens_end, readNode->token, readNode->comType);
           }
-          rpnTokens_end = insert_at_end(rpnTokens_end, inTokens->token);
+          rpnTokens_end = insert_at_end(rpnTokens_end, inTokens->token, inTokens->comType);
         break;
       default:
         printf("Not a valid comType?\n");
