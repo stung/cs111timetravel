@@ -524,10 +524,18 @@ command_stream_t rpnToCommTree(token_node_t inRPNTokens) {
         // }
         break;
       case REDIRECT_MORE:
-        // rpnTokens_end = insert_at_end(rpnTokens_end, inTokens->token);
+        inRPNTokens = inRPNTokens->next_token;
+        ctnode_t outputnode = NULL;
+	   outputnode = ctPop(outCommStream);
+	   outputnode->currCommand->output = inRPNTokens->token; //FIXME: should check if next token is SIMPLE COMMAND
+	   ctPush(outCommStream, outputnode->currCommand);
         break;
       case REDIRECT_LESS:
-	   // rpnTokens_end = insert_at_end(rpnTokens_end, inTokens->token);
+        inRPNTokens = inRPNTokens->next_token;
+        ctnode_t inputnode = NULL;
+	   inputnode = ctPop(outCommStream);
+	   inputnode->currCommand->input = inRPNTokens->token; //FIXME: should check if next token is SIMPLE COMMAND
+	   ctPush(outCommStream, inputnode->currCommand);
         break;
       case PIPE:
       case AMPERSAND:
