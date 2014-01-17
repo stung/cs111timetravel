@@ -460,15 +460,15 @@ command_stream_t rpnToCommTree(token_node_t inRPNTokens) {
         readData->output = 0;
 
         int i = 0;
-        readData->u.word = (char *)malloc(sizeof(char *) * 20); //FIXME: CANNOT BE STATIC
+        readData->u.word = (char **)malloc(sizeof(char **) * 20); //FIXME: CANNOT BE STATIC
 
         while(inRPNTokens->comType == WORD) {
-          readData->u.(*(word + i)) = (char *)malloc(sizeof(char *) * 50);
-          memset(readData->u.(*(word + i)), 0, sizeof(char*) * 50); // FIXME: CANNOT BE STATIC
+          *(readData->u.word + i) = (char *)malloc(sizeof(char *) * 50);
+          memset(*(readData->u.word + i), 0, sizeof(char*) * 50); // FIXME: CANNOT BE STATIC
 
           // Assume null terminated Strings
           unsigned dataLength = strlen(inRPNTokens->token);
-          strncpy(readData->u.(*(word + i)), inRPNTokens->token, dataLength);
+          strncpy(*(readData->u.word + i), inRPNTokens->token, dataLength);
 
           inRPNTokens = inRPNTokens->next_token;
           i++;
@@ -527,11 +527,11 @@ command_stream_t rpnToCommTree(token_node_t inRPNTokens) {
 
         // subCommands to be written to
         ctnode_t subCommand = NULL;
-        int i = 0;
-        while (i < 2) {
-          subCommand = ctPop(outStream);
-          readData->u.command[i] = subCommand->currCommand;
-          i++;
+        int j = 0;
+        while (j < 2) {
+          subCommand = ctPop(outCommStream);
+          readData->u.command[j] = subCommand->currCommand;
+          j++;
         }
 
         // Assigning the command type
@@ -547,14 +547,14 @@ command_stream_t rpnToCommTree(token_node_t inRPNTokens) {
           printf("ERROR: Should not be here");
         }
         
-        ctPush(outStream, readData);
+        ctPush(outCommStream, readData);
         break;
       default:
         printf("Not a valid comType\n");
         break;
     }
     // Obtain next token
-    inTokens = inTokens->next_token;
+    inRPNTokens = inRPNTokens->next_token;
   }
   return outCommStream;
 }
@@ -602,16 +602,15 @@ make_command_stream (int (*get_next_byte) (void *),
   outStream = rpnToCommTree(rpnTokens);
 
   printf("Finished RPN to Command Stream\n");
-  // error (1, 0, "command reading not yet implemented");
-  return 0;
+  return outStream;
 }
 
 command_t
 read_command_stream (command_stream_t s)
 {
-  s;
-  /* FIXME: Replace this with your implementation too.  */
-
-  error (1, 0, "command reading not yet implemented");
-  return 0;
+  command_t outCommand = NULL;
+  ctnode_t outNode = NULL;
+  outNode = ctPop(s);
+  outCommand = outNode->currCommand;
+  return outCommand;
 }
