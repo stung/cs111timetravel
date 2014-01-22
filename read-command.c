@@ -8,6 +8,7 @@
 #include <sys/stat.h>
 #include <string.h>
 #include <error.h>
+#include <ctype.h>
 
 #define DEBUG 0
 
@@ -35,6 +36,16 @@ struct token_node
 };
 
 typedef struct token_node *token_node_t;
+
+// Check if the input char valid
+void checkIfValid(int c) {
+	if (!(isalpha(c) || isdigit(c) || (c == '!') || (c == '%') || (c == '+') 
+		|| (c == '-') || (c == '.') || (c == '/') || (c == ':') || (c =='@') 
+			|| (c == '^') || (c == '_') || (c == ';') || (c == '|') || (c == '&') 
+			|| (c == '(') || (c == ')') || (c == '<') || (c == '>') || (c == '\n')
+			|| (c == '\t') || (c == EOF)))
+       error(1, 0, "Invalid char detected");
+}
 
 // inputs: tail of a linked list, string data
 // output: pointer to the tail of the linked list
@@ -159,6 +170,7 @@ token_node_t read_word (token_node_t tail, void *stream, int c) {
   
   char shouldExit = 0;
   while (nextchar != EOF && !shouldExit) {
+    checkIfValid(nextchar);
     switch (nextchar) {
       case ';':
       case '(':
@@ -201,6 +213,9 @@ token_node_t intoTokens(int (*get_next_byte) (void *),
 
   int c;
   while((c = get_next_byte(get_next_byte_argument)) != EOF) {
+    
+    checkIfValid(c);
+
     switch (c) {
       case ';':
       case '(':
@@ -486,19 +501,19 @@ command_stream_t rpnToCommTree(token_node_t inRPNTokens) {
         readData->input = 0;
         readData->output = 0;
 
-        int i = 0;
+
         readData->u.word = (char **)malloc(sizeof(char **) * 20); //FIXME: CANNOT BE STATIC
         
 	   char *tok = NULL;
 	   tok = strtok(inRPNTokens->token, " ");
 
+        int i = 0, n;
         while(tok) {
-          // Assume null terminated Strings
+		// Assume null terminated Strings
           unsigned dataLength = strlen(tok);
           
 		*(readData->u.word + i) = (char *)malloc(sizeof(char *) * dataLength);
-          memset(*(readData->u.word + i), 0, sizeof(char*) * datalength); // FIXME: CANNOT BE STATIC
-
+          memset(*(readData->u.word + i), 0, sizeof(char*) * dataLength); // FIXME: CANNOT BE STATIC
 
           strncpy(*(readData->u.word + i), tok, dataLength);
 
