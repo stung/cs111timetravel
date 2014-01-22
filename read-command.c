@@ -220,8 +220,14 @@ token_node_t intoTokens(int (*get_next_byte) (void *),
       case ';':
       case '(':
       case ')':
+        tokenlist_end = read_singlespecial(tokenlist_end, c);
+        break;
       case '<':
       case '>':
+	   if (tokenlist_end == NULL)
+		   error(1, 0, "Invalid input!!!");
+	   else if ((tokenlist_end->comType != WORD) && (tokenlist_end->comType != SUBSHELL))
+		   error(1, 0, "Invalid input!!!");
         tokenlist_end = read_singlespecial(tokenlist_end, c);
         break;
       case '&':
@@ -345,8 +351,6 @@ token_node_t inToRPN(token_node_t inTokens) {
         }
         break;
       case REDIRECT_MORE:
-        rpnTokens_end = insert_at_end(rpnTokens_end, inTokens->token, inTokens->comType);
-        break;
       case REDIRECT_LESS:
         rpnTokens_end = insert_at_end(rpnTokens_end, inTokens->token, inTokens->comType);
         break;
