@@ -237,6 +237,9 @@ token_node_t intoTokens(int (*get_next_byte) (void *),
         tokenlist_end = read_pipe(tokenlist_end, get_next_byte_argument);
         break;
       case '\n':
+	   if (tokenlist_end != NULL)
+		   if((tokenlist_end->comType == REDIRECT_LESS) || (tokenlist_end->comType == REDIRECT_MORE))
+			   error(1, 0, "Invalid input!!!");
         tokenlist_end = read_newline(tokenlist_end);
         break;
       case ' ':
