@@ -37,12 +37,26 @@ struct token_node
 
 typedef struct token_node *token_node_t;
 
+int isWords(int c) {
+	if (isalpha(c) || isdigit(c) || (c == '!') || (c == '%') || (c == '+') 
+		|| (c == '-') || (c == '.') || (c == '/') || (c == ':') || (c =='@') 
+			|| (c == '^') || (c == '_'))
+		return 1;
+	else
+		return 0;
+}
+
+int isSpecialTokens(int c) {
+	if ((c == ';') || (c == '|') || (c == '&') || (c == '(') || (c == ')') 
+			|| (c == '<') || (c == '>') || (c == '\n'))
+		return 1;
+	else
+		return 0;
+}
+
 // Check if the input char valid
 void checkIfValid(int c) {
-	if (!(isalpha(c) || isdigit(c) || (c == '!') || (c == '%') || (c == '+') 
-		|| (c == '-') || (c == '.') || (c == '/') || (c == ':') || (c =='@') 
-			|| (c == '^') || (c == '_') || (c == ';') || (c == '|') || (c == '&') 
-			|| (c == '(') || (c == ')') || (c == '<') || (c == '>') || (c == '\n')
+	if (!(isWords(c) || isSpecialTokens(c) || (c == '\n')
 			|| (c == ' ') || (c == '\t') || (c == EOF)))
        error(1, 0, "Invalid char detected");
 }
