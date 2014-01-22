@@ -493,11 +493,13 @@ command_stream_t rpnToCommTree(token_node_t inRPNTokens) {
 	   tok = strtok(inRPNTokens->token, " ");
 
         while(tok) {
-          *(readData->u.word + i) = (char *)malloc(sizeof(char *) * 50);
-          memset(*(readData->u.word + i), 0, sizeof(char*) * 50); // FIXME: CANNOT BE STATIC
-
           // Assume null terminated Strings
           unsigned dataLength = strlen(tok);
+          
+		*(readData->u.word + i) = (char *)malloc(sizeof(char *) * dataLength);
+          memset(*(readData->u.word + i), 0, sizeof(char*) * datalength); // FIXME: CANNOT BE STATIC
+
+
           strncpy(*(readData->u.word + i), tok, dataLength);
 
           tok = strtok(NULL, " ");
