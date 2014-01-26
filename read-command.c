@@ -57,8 +57,10 @@ int isSpecialTokens(int c) {
 // Check if the input char valid
 void checkIfValid(int c) {
 	if (!(isWords(c) || isSpecialTokens(c) || (c == '\n')
-			|| (c == ' ') || (c == '\t') || (c == EOF)))
+			|| (c == ' ') || (c == '\t') || (c == '#') || (c == EOF))) {
        error(1, 0, "Invalid char detected");
+       printf("Invalid char is %c\n", (char)c);
+   }
 }
 
 // inputs: tail of a linked list, string data
@@ -396,9 +398,9 @@ token_node_t inToRPN(token_node_t inTokens) {
           while ((readNode = pop(operatorStack)) != NULL) {
             rpnTokens_end = insert_at_end(rpnTokens_end, readNode->token, readNode->comType);
             if ((strcmp(readNode->token, "(") == 0) || (strcmp(readNode->token, ";") == 0)) {
-		    push(operatorStack, readNode->token, readNode->comType);
+      		    push(operatorStack, readNode->token, readNode->comType);
               break;
-		  }
+      		  }
           }
 		push(operatorStack, inTokens->token, inTokens->comType);
 	   } else {
