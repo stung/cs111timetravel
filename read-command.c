@@ -58,8 +58,8 @@ int isSpecialTokens(int c) {
 void checkIfValid(int c) {
 	if (!(isWords(c) || isSpecialTokens(c) || (c == '\n')
 			|| (c == ' ') || (c == '\t') || (c == '#') || (c == EOF))) {
-       error(1, 0, "Invalid char detected");
        printf("Invalid char is %c\n", (char)c);
+       error(1, 0, "Invalid char detected");
    }
 }
 
