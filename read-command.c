@@ -366,6 +366,9 @@ token_node_t inToRPN(token_node_t inTokens) {
         }
         while (operatorStack->topNode != NULL) {
           readNode = pop(operatorStack);
+		if (strcmp(readNode->token, "(") == 0) {
+			error(1, 0, "Invalid input!!!");
+		}
           rpnTokens_end = insert_at_end(rpnTokens_end, readNode->token, readNode->comType);
         }
         rpnTokens_end = insert_at_end(rpnTokens_end, inTokens->token, inTokens->comType);
@@ -379,6 +382,8 @@ token_node_t inToRPN(token_node_t inTokens) {
             if (strcmp(readNode->token, "(") == 0)
               break;
           }
+		if (readNode == NULL) 
+			error(1, 0, "Invalid input!!!");
         }
         break;
       case REDIRECT_MORE:
