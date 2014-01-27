@@ -63,6 +63,18 @@ void checkIfValid(int c) {
    }
 }
 
+// for AND_COMMAND, PIPE_COMMAND, SEQUENCE_COMMAND, PIPE_COMMAND
+// check if the previous and the next token valid
+void checkIfSimpleOrSubshell(token_node_t token) {
+	if (token == NULL)
+		error(1, 0, "Invalid input!!!");
+	if (!(token->comType == SUBSHELL || token->comType == WORD)) {
+		printf("%s\n", token->token);
+		error(1, 0, "Invalid input!!!");
+	}
+}
+
+
 // inputs: tail of a linked list, string data
 // output: pointer to the tail of the linked list
 token_node_t insert_at_end (token_node_t oldtail, char *data, enum parse_type comType) {
@@ -118,10 +130,7 @@ token_node_t read_ampersand (token_node_t tail, void *stream) {
     char *token = "&&";
     tmp = insert_at_end(tail, token, AMPERSAND);
   } else {
-    // push the char back onto the stream
-    ungetc(c, stream);
-    char *token = "&";
-    tmp = insert_at_end(tail, token, WORD);
+    error(1, 0, "Invalid input!!!");
   }
   return tmp;
 }
@@ -354,6 +363,9 @@ token_node_t inToRPN(token_node_t inTokens) {
         }
         while (operatorStack->topNode != NULL) {
           readNode = pop(operatorStack);
+		if (strcmp(readNode->token, "(") == 0) {
+			error(1, 0, "Invalid input!!!");
+		}
           rpnTokens_end = insert_at_end(rpnTokens_end, readNode->token, readNode->comType);
         }
         rpnTokens_end = insert_at_end(rpnTokens_end, inTokens->token, inTokens->comType);
@@ -367,6 +379,8 @@ token_node_t inToRPN(token_node_t inTokens) {
             if (strcmp(readNode->token, "(") == 0)
               break;
           }
+		if (readNode == NULL) 
+			error(1, 0, "Invalid input!!!");
         }
         break;
       case REDIRECT_MORE:
@@ -374,7 +388,10 @@ token_node_t inToRPN(token_node_t inTokens) {
         rpnTokens_end = insert_at_end(rpnTokens_end, inTokens->token, inTokens->comType);
         break;
       case PIPE:
-        readNode = operatorStack->topNode;
+	   checkIfSimpleOrSubshell(rpnTokens_end);
+	   checkIfSimpleOrSubshell(inTokens->next_token);
+        
+	   readNode = operatorStack->topNode;
         if (readNode == NULL) {
           push(operatorStack, inTokens->token, inTokens->comType);
         } else if (strcmp(readNode->token, "|") == 0) {
@@ -387,7 +404,10 @@ token_node_t inToRPN(token_node_t inTokens) {
         break;
       case AMPERSAND:
       case OR:
-        readNode = operatorStack->topNode;
+	   checkIfSimpleOrSubshell(rpnTokens_end);
+	   checkIfSimpleOrSubshell(inTokens->next_token);
+        
+	   readNode = operatorStack->topNode;
         if (readNode == NULL) {
           push(operatorStack, inTokens->token, inTokens->comType);
         } else if (strcmp(readNode->token, ";") == 0) {
@@ -410,6 +430,9 @@ token_node_t inToRPN(token_node_t inTokens) {
         }
         break;
       case SEMICOLON:
+	   checkIfSimpleOrSubshell(rpnTokens_end);
+	   checkIfSimpleOrSubshell(inTokens->next_token);
+
         if (operatorStack == NULL) {
             rpnTokens_end = insert_at_end(rpnTokens_end, inTokens->token, inTokens->comType);
             break;
