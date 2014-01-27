@@ -130,10 +130,7 @@ token_node_t read_ampersand (token_node_t tail, void *stream) {
     char *token = "&&";
     tmp = insert_at_end(tail, token, AMPERSAND);
   } else {
-    // push the char back onto the stream
-    ungetc(c, stream);
-    char *token = "&";
-    tmp = insert_at_end(tail, token, WORD);
+    error(1, 0, "Invalid input!!!");
   }
   return tmp;
 }
