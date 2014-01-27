@@ -133,7 +133,7 @@ execute_command (command_t c, int time_travel)
   	  }
   	  break;
   	case SUBSHELL_COMMAND:
-  	  error(1, 0, "Subshell not yet implemented!");
+  	  execute_command(c->u.subshell_command, time_travel);
   	  break;
   	default:
   	  break;
