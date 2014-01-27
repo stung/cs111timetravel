@@ -525,7 +525,6 @@ command_stream_t rpnToCommTree(token_node_t inRPNTokens) {
         readData->input = 0;
         readData->output = 0;
 
-
         readData->u.word = (char **)malloc(sizeof(char **) * 20); //FIXME: CANNOT BE STATIC
         
 	   char *tok = NULL;
@@ -550,7 +549,19 @@ command_stream_t rpnToCommTree(token_node_t inRPNTokens) {
         //FIXME
 	   break;
       case SUBSHELL:
-        //FIXME
+      // initializing a new command
+      readData->type = SUBSHELL_COMMAND;
+      readData->status = - 1;
+      readData->input = 0;
+      readData->output = 0;
+
+      // popping out the command to be subshelled
+      ctnode_t subshellnode = NULL;
+      subshellnode = ctPop(outCommStream);
+
+      // set our new command union command, push it back onto the stack
+      readData->u.subshell_command = subshellnode->currCommand;
+      ctPush(outCommStream, subshellnode->currCommand);
 	   break;
       case REDIRECT_MORE:
         inRPNTokens = inRPNTokens->next_token;
