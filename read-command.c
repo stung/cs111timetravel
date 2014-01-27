@@ -536,7 +536,7 @@ command_stream_t rpnToCommTree(token_node_t inRPNTokens) {
           unsigned dataLength = strlen(tok);
           
 		*(readData->u.word + i) = (char *)malloc(sizeof(char *) * dataLength);
-          memset(*(readData->u.word + i), 0, sizeof(char*) * dataLength); // FIXME: CANNOT BE STATIC
+          memset(*(readData->u.word + i), 0, sizeof(char *) * dataLength); // FIXME: CANNOT BE STATIC
 
           strncpy(*(readData->u.word + i), tok, dataLength);
 
