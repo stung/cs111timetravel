@@ -48,7 +48,7 @@ int isWords(int c) {
 
 int isSpecialTokens(int c) {
 	if ((c == ';') || (c == '|') || (c == '&') || (c == '(') || (c == ')') 
-			|| (c == '<') || (c == '>') || (c == '\n'))
+			|| (c == '<') || (c == '>'))
 		return 1;
 	else
 		return 0;
@@ -58,7 +58,6 @@ int isSpecialTokens(int c) {
 void checkIfValid(int c) {
 	if (!(isWords(c) || isSpecialTokens(c) || (c == '\n')
 			|| (c == ' ') || (c == '\t') || (c == '#') || (c == EOF))) {
-       printf("Invalid char is %c\n", (char)c);
        error(1, 0, "Invalid char detected");
    }
 }
@@ -98,26 +97,22 @@ token_node_t read_singlespecial (token_node_t tail, int c) {
   char token[2];
   memset(token, '\0', sizeof(token));
   sprintf(token, "%c", c);
-  token_node_t tmp = (token_node_t)malloc(sizeof(struct token_node));
-  //tmp = insert_at_end(tail, token);
   switch (c) {
     case ';':
-      tmp = insert_at_end(tail, token, SEMICOLON);
-      break;
+      return insert_at_end(tail, token, SEMICOLON);
     case '(':
     case ')':
-      tmp = insert_at_end(tail, token, SUBSHELL);
-      break;
+      return insert_at_end(tail, token, SUBSHELL);
     case '<':
-      tmp = insert_at_end(tail, token, REDIRECT_LESS);
-      break;
+      return insert_at_end(tail, token, REDIRECT_LESS);
     case '>':
-      tmp = insert_at_end(tail, token, REDIRECT_MORE);
-      break;
+      return insert_at_end(tail, token, REDIRECT_MORE);
     default:
+      // Should not be this case
+      error(1, 0, "Invalid input!!!");
       break;
   }
-  return tmp;
+  return NULL;
 }
 
 // input: tail of a linked list, character stream
@@ -125,14 +120,16 @@ token_node_t read_singlespecial (token_node_t tail, int c) {
 token_node_t read_ampersand (token_node_t tail, void *stream) {
   int c;
   c = getc(stream);
-  token_node_t tmp = (token_node_t)malloc(sizeof(struct token_node));
+
   if (c == '&') {
     char *token = "&&";
-    tmp = insert_at_end(tail, token, AMPERSAND);
+    return insert_at_end(tail, token, AMPERSAND);
   } else {
+    // If there is '&' in command, it should be "&&"
+    // Any other case is invalid
     error(1, 0, "Invalid input!!!");
   }
-  return tmp;
+  return NULL;
 }
 
 // input: tail of a linked list, character stream
@@ -140,33 +137,34 @@ token_node_t read_ampersand (token_node_t tail, void *stream) {
 token_node_t read_pipe (token_node_t tail, void *stream) {
   int c;
   c = getc(stream);
-  token_node_t tmp = (token_node_t)malloc(sizeof(struct token_node));
+
   if (c == '|') {
     char *token = "||";
-    tmp = insert_at_end(tail, token, OR);
+    return insert_at_end(tail, token, OR);
   } else {
     // push the char back onto the stream
     ungetc(c, stream);
     char *token = "|";
-    tmp = insert_at_end(tail, token, PIPE);
+    return insert_at_end(tail, token, PIPE);
   }
-  return tmp;
 }
 
 // input: tail of a linked list, character stream
 // output: tail of a linked list
 token_node_t read_newline (token_node_t tail) {
+  // Tail will be null if there is not yet any meaningful token from the beginning of the file.
+  // New line can be ignore in this case
   if (tail == NULL)
 	  return NULL;
 
   if ((tail->comType == OR) || (tail->comType == PIPE) || 
         (tail->comType == AMPERSAND) || (tail->comType == NEWLINE)) {
+    // New line is the same as white space in these cases
+    // No need to attach '\n' to the token list
     return tail;
   } else {
-    token_node_t tmp = NULL; //(token_node_t)malloc(sizeof(struct token_node));
     char *token = "\n";
-    tmp = insert_at_end(tail, token, NEWLINE);
-    return tmp;
+    return insert_at_end(tail, token, NEWLINE);
   }
 }
 
@@ -205,7 +203,7 @@ token_node_t read_word (token_node_t tail, void *stream, int c) {
       case '&':
       case '|':
       case '\n':
-    	 case ' ':
+    	case ' ':
       case '\t':
       case EOF:
         ungetc(nextchar, stream);
@@ -249,10 +247,7 @@ token_node_t intoTokens(int (*get_next_byte) (void *),
         break;
       case '<':
       case '>':
-	   if (tokenlist_end == NULL)
-		   error(1, 0, "Invalid input!!!");
-	   else if ((tokenlist_end->comType != WORD) && (tokenlist_end->comType != SUBSHELL))
-		   error(1, 0, "Invalid input!!!");
+        checkIfSimpleOrSubshell(tokenlist_end);
         tokenlist_end = read_singlespecial(tokenlist_end, c);
         break;
       case '&':
@@ -262,20 +257,21 @@ token_node_t intoTokens(int (*get_next_byte) (void *),
         tokenlist_end = read_pipe(tokenlist_end, get_next_byte_argument);
         break;
       case '\n':
-	   if (tokenlist_end != NULL)
-		   if((tokenlist_end->comType == REDIRECT_LESS) || (tokenlist_end->comType == REDIRECT_MORE))
-			   error(1, 0, "Invalid input!!!");
+	      if (tokenlist_end != NULL)
+		      if((tokenlist_end->comType == REDIRECT_LESS) || (tokenlist_end->comType == REDIRECT_MORE))
+			      error(1, 0, "Invalid input!!!");
         tokenlist_end = read_newline(tokenlist_end);
         break;
       case ' ':
       case '\t':
-    	 case EOF:
+    	case EOF:
     	  break;
-    	 default:
+    	default:
         tokenlist_end = read_word(tokenlist_end, get_next_byte_argument, c);
         break;
     };
 
+    // Set token list head when get the the first token
     if (tokenlist_head == NULL)
       tokenlist_head = tokenlist_end;
   } 
@@ -450,8 +446,10 @@ token_node_t inToRPN(token_node_t inTokens) {
         //printf("Not a valid comType?\n");
         break;
     }
+
     if (rpnTokens == NULL)
       rpnTokens = rpnTokens_end;
+
     // Obtain next token
     inTokens = inTokens->next_token;
   }
@@ -507,14 +505,12 @@ ctnode_t ctPop(command_stream_t inCTStack) {
 
   // Rearranging the new top node
   if (inCTStack == NULL) {
-    //printf("ERROR: Stack is NULL!\n");
     return oldtop;
   }
 
   // The old top will be the stack's current top node
   oldtop = inCTStack->topNode;
   if (oldtop == NULL) {
-    //printf("ERROR: Nothing in stack!\n");
     return oldtop;
   }
 
@@ -534,8 +530,8 @@ command_stream_t rpnToCommTree(token_node_t inRPNTokens) {
   command_stream_t outCommStream =
         (command_stream_t)malloc(sizeof(struct command_stream));
   memset(outCommStream, 0, sizeof(struct command_stream));
- ctnode_t readNode = (ctnode_t)malloc(sizeof(struct ctStack_node)); 
- memset(readNode, 0, sizeof(struct ctStack_node));
+  ctnode_t readNode = (ctnode_t)malloc(sizeof(struct ctStack_node)); 
+  memset(readNode, 0, sizeof(struct ctStack_node));
 
   command_t readData = (command_t)malloc(sizeof(struct command));
   memset(readData, 0, sizeof(struct command));
@@ -550,16 +546,16 @@ command_stream_t rpnToCommTree(token_node_t inRPNTokens) {
 
         readData->u.word = (char **)malloc(sizeof(char **) * 20); //FIXME: CANNOT BE STATIC
         
-	   char *tok = NULL;
-	   tok = strtok(inRPNTokens->token, " ");
+	      char *tok = NULL;
+	      tok = strtok(inRPNTokens->token, " ");
 
         int i = 0, n;
         while(tok) {
-		// Assume null terminated Strings
+		      // Assume null terminated Strings
           unsigned dataLength = strlen(tok);
           
-		*(readData->u.word + i) = (char *)malloc(sizeof(char *) * dataLength);
-          memset(*(readData->u.word + i), 0, sizeof(char*) * dataLength); // FIXME: CANNOT BE STATIC
+		      *(readData->u.word + i) = (char *)malloc(sizeof(char *) * dataLength);
+          memset(*(readData->u.word + i), 0, sizeof(char*) * dataLength);
 
           strncpy(*(readData->u.word + i), tok, dataLength);
 
@@ -570,35 +566,35 @@ command_stream_t rpnToCommTree(token_node_t inRPNTokens) {
         break;
       case NEWLINE:
         //FIXME
-	   break;
+	      break;
       case SUBSHELL:
-      // initializing a new command
-      readData->type = SUBSHELL_COMMAND;
-      readData->status = - 1;
-      readData->input = 0;
-      readData->output = 0;
+        // initializing a new command
+        readData->type = SUBSHELL_COMMAND;
+        readData->status = - 1;
+        readData->input = 0;
+        readData->output = 0;
 
-      // popping out the command to be subshelled
-      ctnode_t subshellnode = NULL;
-      subshellnode = ctPop(outCommStream);
+        // popping out the command to be subshelled
+        ctnode_t subshellnode = NULL;
+        subshellnode = ctPop(outCommStream);
 
-      // set our new command union command, push it back onto the stack
-      readData->u.subshell_command = subshellnode->currCommand;
-      ctPush(outCommStream, subshellnode->currCommand);
-	   break;
+        // set our new command union command, push it back onto the stack
+        readData->u.subshell_command = subshellnode->currCommand;
+        ctPush(outCommStream, subshellnode->currCommand);
+	      break;
       case REDIRECT_MORE:
         inRPNTokens = inRPNTokens->next_token;
         ctnode_t outputnode = NULL;
-	   outputnode = ctPop(outCommStream);
-	   outputnode->currCommand->output = inRPNTokens->token; //FIXME: should check if next token is SIMPLE COMMAND
-	   ctPush(outCommStream, outputnode->currCommand);
+	      outputnode = ctPop(outCommStream);
+	      outputnode->currCommand->output = inRPNTokens->token; //FIXME: should check if next token is SIMPLE COMMAND
+	      ctPush(outCommStream, outputnode->currCommand);
         break;
       case REDIRECT_LESS:
         inRPNTokens = inRPNTokens->next_token;
         ctnode_t inputnode = NULL;
-	   inputnode = ctPop(outCommStream);
-	   inputnode->currCommand->input = inRPNTokens->token; //FIXME: should check if next token is SIMPLE COMMAND
-	   ctPush(outCommStream, inputnode->currCommand);
+	      inputnode = ctPop(outCommStream);
+	      inputnode->currCommand->input = inRPNTokens->token; //FIXME: should check if next token is SIMPLE COMMAND
+	      ctPush(outCommStream, inputnode->currCommand);
         break;
       case PIPE:
       case AMPERSAND:
@@ -627,13 +623,13 @@ command_stream_t rpnToCommTree(token_node_t inRPNTokens) {
         } else if (inRPNTokens->comType == SEMICOLON) {
           readData->type = SEQUENCE_COMMAND;
         } else {
-          printf("ERROR: Should not be here");
+          error(1, 0, "Invalid input!!!");
         }
         
         ctPush(outCommStream, readData);
         break;
       default:
-        printf("Not a valid comType\n");
+        error(1, 0, "Invalid input!!!");
         break;
     }
     // Obtain next token
@@ -668,7 +664,6 @@ make_command_stream (int (*get_next_byte) (void *),
   token_node_t tokenlist_head = NULL;
   tokenlist_head = intoTokens(get_next_byte, get_next_byte_argument);
 
-  //printf("Finished tokenizing\n");
   
   if (DEBUG) {
     token_node_t test = tokenlist_head;
@@ -682,7 +677,6 @@ make_command_stream (int (*get_next_byte) (void *),
   token_node_t rpnTokens = NULL;
   rpnTokens = inToRPN(tokenlist_head);
 
-  //printf("Finished RPN\n");
   
   if (DEBUG) {
     token_node_t rpnTest = rpnTokens;
@@ -696,7 +690,6 @@ make_command_stream (int (*get_next_byte) (void *),
   command_stream_t outStream = NULL;
   outStream = rpnToCommTree(rpnTokens);
 
-  //printf("Finished RPN to Command Stream\n");
   return outStream;
 }
 
