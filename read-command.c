@@ -228,7 +228,8 @@ token_node_t read_word (token_node_t tail, void *stream, int c) {
 }
 
 token_node_t intoTokens(int (*get_next_byte) (void *),
-         void *get_next_byte_argument) {
+         void *get_next_byte_argument)
+{
 
   // Tokeninzing our commands
   token_node_t tokenlist_head = NULL;
@@ -464,8 +465,6 @@ struct ctStack_node
   struct ctStack_node *next_node;
 };
 
-/* FIXME: Define the type 'struct command_stream' here.  This should
-   complete the incomplete type declaration in command.h.  */
 struct command_stream
 {
   struct ctStack_node *topNode;
@@ -524,6 +523,24 @@ ctnode_t ctPop(command_stream_t inCTStack) {
   return oldtop;
 }
 
+// Dependency Graph Node
+struct depNode
+{
+  command_t depCommand;
+  char** inputs;
+  char** outputs;
+};
+
+typedef struct depNode *depnode_t;
+
+// order of the commands
+struct cmdOrder
+{
+  depnode_t head;
+};
+
+typedef struct cmdOrder *corder_t;
+
 // Input: token list of RPN tokens
 // Output: command stream of commands
 command_stream_t rpnToCommTree(token_node_t inRPNTokens) {
@@ -535,6 +552,11 @@ command_stream_t rpnToCommTree(token_node_t inRPNTokens) {
 
   command_t readData = (command_t)malloc(sizeof(struct command));
   memset(readData, 0, sizeof(struct command));
+
+  // setting up dependencies for time travel
+  corder_t cmdList = (corder_t)malloc(sizeof(struct cmdOrder));
+  memset(cmdList, 0, sizeof(struct cmdOrder));
+
 
   while(inRPNTokens != NULL) {
     switch (inRPNTokens->comType) {
@@ -588,6 +610,9 @@ command_stream_t rpnToCommTree(token_node_t inRPNTokens) {
 	      outputnode = ctPop(outCommStream);
 	      outputnode->currCommand->output = inRPNTokens->token; //FIXME: should check if next token is SIMPLE COMMAND
 	      ctPush(outCommStream, outputnode->currCommand);
+
+        // output dependency
+
         break;
       case REDIRECT_LESS:
         inRPNTokens = inRPNTokens->next_token;
@@ -643,14 +668,13 @@ command_stream_t rpnToCommTree(token_node_t inRPNTokens) {
   ctnode_t tmpNode = (ctnode_t)malloc(sizeof(struct ctStack_node));
   memset(readNode, 0, sizeof(struct ctStack_node));
   
+  // Reversing the order of the stack
   while((tmpNode = ctPop(outCommStream)) != NULL) {
   	ctPush(commStream, tmpNode->currCommand);
   }
 
   return commStream;
 }
-
-
 
 command_stream_t
 make_command_stream (int (*get_next_byte) (void *),
