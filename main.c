@@ -3,7 +3,13 @@
 #include <errno.h>
 #include <error.h>
 #include <getopt.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/wait.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "command.h"
 
@@ -20,6 +26,25 @@ static int
 get_next_byte (void *stream)
 {
   return getc (stream);
+}
+
+// FIXME: Include a dependency graph argument here
+void execute_command_parallel (command_stream_t command_stream) {
+  command_t currCommand;
+  pid_t child;
+
+  while ((currCommand = read_command_stream(command_stream))) {
+    child = fork();
+    if (child == 0) { // Child Process
+      execute_command(currCommand, 0);
+      break;
+    } else if (child > 0) { // Parent Process
+      continue;
+    } else { // error on fork
+      error(1, 0, "Cannot create parallel process!");
+    }
+  }
+  return;
 }
 
 int
@@ -56,16 +81,18 @@ main (int argc, char **argv)
   command_t command;
   while ((command = read_command_stream (command_stream)))
     {
-      if (print_tree)
-	{
-	  printf ("# %d\n", command_number++);
-	  print_command (command);
-	}
-      else
-	{
-	  last_command = command;
-	  execute_command (command, time_travel);
-	}
+      if (time_travel) {
+        // FIXME: Create the dependency graph here
+        last_command = command;
+        execute_command_parallel(command_stream);
+        break;
+      } else if (print_tree) {
+    	  printf ("# %d\n", command_number++);
+    	  print_command (command);
+    	} else {
+    	  last_command = command;
+    	  execute_command (command, time_travel);
+    	}
     }
 
   return print_tree || !last_command ? 0 : command_status (last_command);
