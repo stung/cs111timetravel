@@ -430,18 +430,25 @@ token_node_t inToRPN(token_node_t inTokens) {
 	   checkIfSimpleOrSubshell(rpnTokens_end);
 	   checkIfSimpleOrSubshell(inTokens->next_token);
 
-        if (operatorStack == NULL) {
-            rpnTokens_end = insert_at_end(rpnTokens_end, inTokens->token, inTokens->comType);
-            break;
-          }
-          readNode = operatorStack->topNode;
-          // Stop when stack is empty or when you hit a subshell
-          while ((readNode != NULL) && 
-                  (strcmp(readNode->token, "(") != 0)) {
-            readNode = pop(operatorStack);
+        readNode = operatorStack->topNode;
+        if (readNode == NULL) {
+          push(operatorStack, inTokens->token, inTokens->comType);
+        } else if (strcmp(readNode->token, "(") == 0) {
+          push(operatorStack, inTokens->token, inTokens->comType);
+        } else if (strcmp(readNode->token, ";") == 0) {
+          readNode = pop(operatorStack);
+          rpnTokens_end = insert_at_end(rpnTokens_end, readNode->token, readNode->comType);
+          push(operatorStack, inTokens->token, inTokens->comType);
+	   } else {
+          while ((readNode = pop(operatorStack)) != NULL) {
             rpnTokens_end = insert_at_end(rpnTokens_end, readNode->token, readNode->comType);
+            if (strcmp(readNode->token, "(") == 0) {
+      		    push(operatorStack, readNode->token, readNode->comType);
+              break;
+            }
           }
-          rpnTokens_end = insert_at_end(rpnTokens_end, inTokens->token, inTokens->comType);
+		push(operatorStack, inTokens->token, inTokens->comType);
+	   }
         break;
       default:
         //printf("Not a valid comType?\n");
@@ -634,7 +641,7 @@ command_stream_t rpnToCommTree(token_node_t inRPNTokens) {
         int j = 0;
         while (j < 2) {
           subCommand = ctPop(outCommStream);
-          readData->u.command[1 - j] = subCommand->currCommand;
+		readData->u.command[1 - j] = subCommand->currCommand;
           j++;
         }
 
@@ -701,13 +708,12 @@ make_command_stream (int (*get_next_byte) (void *),
   token_node_t rpnTokens = NULL;
   rpnTokens = inToRPN(tokenlist_head);
 
-  
   if (DEBUG) {
     token_node_t rpnTest = rpnTokens;
     while(rpnTest != NULL) {
       printf("%s ", rpnTest->token);
       rpnTest = rpnTest->next_token;
-    } 
+    }
   } 
 
   // RPN Parser to Command Stream
