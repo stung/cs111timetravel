@@ -96,6 +96,39 @@ void findCommandIO(ionode_t node, command_t c) {
   }
 }
 
+int findOutputFile(ionode_t n, char* fileName, int index) {
+	int i = 0;
+	while (*(n->output + i) != NULL) {
+		if (strcmp(*(n->output + i), fileName) == 0)
+			return index;
+		i++;
+	}
+	if (n->prev == NULL)
+		return -1;
+	else
+		return findOutputFile(n->prev, fileName, index - 1);
+}
+
+void updateNumDeps(depG_t g, int index) {
+	int depTotal = 0;
+	int tmp;
+	for (tmp = 0; tmp < index; tmp++)
+		if (g->reqMatrix[index][tmp] == 1)
+			depTotal++;
+	g->numDeps[index] = depTotal;
+}
+
+void setDep(depG_t g, ionode_t n, int index) {
+	int i = 0;
+	while (*(n->input + i) != NULL) {
+		int depIndex = findOutputFile(n->prev, *(n->input + i), index - 1);
+		if (depIndex != -1)
+			g->reqMatrix[index][depIndex] = 1;
+		i++;
+	}
+	updateNumDeps(g, index);
+}
+
 depG_t generateDependecies(command_t c) {
 	iolist_t ioList = (iolist_t)malloc(sizeof(struct commandIOList));
 	depG_t depGraph = (depG_t)malloc(sizeof(struct DependencyGraph));
@@ -104,11 +137,28 @@ depG_t generateDependecies(command_t c) {
      depGraph->commandList = ioList;
 	
 	ionode_t tmpNode = ioList->head;
+	int num = 0;
 	while(tmpNode != NULL) {
+	  num++;
 	  tmpNode->input = (char **)malloc(sizeof(char **) * 20); //FIXME: CANNOT BE STATIC
 	  tmpNode->output = (char **)malloc(sizeof(char **) * 20); //FIXME: CANNOT BE STATIC
 	  findCommandIO(tmpNode, tmpNode->c);
 	  tmpNode = tmpNode->next;
+	}
+	depGraph->numCommands = num;
+	depGraph->numDeps = (int *)calloc(num, sizeof(int));
+
+	depGraph->reqMatrix = (int **)malloc(num * sizeof(int*));
+	int i;
+	for(i = 0; i < num; i++) 
+		depGraph->reqMatrix[i] = (int *)calloc(num, sizeof(int));
+
+	ionode_t node = ioList->head;
+	int j = 0;
+	while(j < num) {
+		setDep(depGraph, node, j);
+		node = node->next;
+		j++;
 	}
 
      return depGraph;
@@ -157,7 +207,6 @@ execute_command (command_t c, int time_travel)
   	  break;
   	case SEQUENCE_COMMAND:
       if (time_travel) {
-  	   printf("time travel mode, start generate dependency\n");
        depGraph = generateDependecies(c);
        ionode_t commHead = depGraph->commandList->head;
        while (commHead != NULL) {
