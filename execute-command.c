@@ -130,7 +130,10 @@ void findCommandIO(ionode_t node, command_t c) {
 
 // searches for dependencies
 int findOutputFile(ionode_t n, char* fileName, int index) {
-	int i = 0;
+	if (n == NULL)
+    return -1;
+
+  int i = 0;
 	while (*(n->output + i) != NULL) {
 		if (strcmp(*(n->output + i), fileName) == 0)
 			return index;
@@ -166,7 +169,7 @@ void setDep(depG_t g, ionode_t n, int index) {
 		int depIndex = findOutputFile(n->prev, *(n->output + j), index - 1);
 		if (depIndex != -1)
 			g->reqMatrix[index][depIndex] = 1;
-		i++;
+		j++;
 	}
 	updateNumDeps(g, index);
 }
@@ -215,9 +218,12 @@ void runDependencies(depG_t g, int* run_array, command_t* comm_array) {
   clist_t child_list = (clist_t)malloc(sizeof(struct childList));
 
   int i;
+  int j;
+  int isAllRun = 1;
   for(i = 0; i < g->numCommands; i++) {
     if (g->numDeps[i] == 0) {
       if (run_array[i] == 0) {
+        isAllRun = 0;
         run_array[i] = 1;
         child = fork();
         if (child == 0) { // child process
@@ -225,6 +231,9 @@ void runDependencies(depG_t g, int* run_array, command_t* comm_array) {
           return;
         } else if (child > 0) { // parent process
           addChildList(child_list, child);
+          for (j = 0; j < g->numCommands; j++) {
+            g->reqMatrix[j][i] = 0;
+          }
           continue;
         } else {
           error(1, 0, "Cannot generate child process!");
@@ -240,8 +249,11 @@ void runDependencies(depG_t g, int* run_array, command_t* comm_array) {
   }
 
   for (i = 0; i < g->numCommands; i++) {
-    if (run_array[i] == 0)
-      runDependencies(g, run_array, comm_array);
+    updateNumDeps(g, i);
+  }
+
+  if (!isAllRun) {
+    runDependencies(g, run_array, comm_array);
   }
   return;
 }
