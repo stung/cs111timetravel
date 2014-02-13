@@ -15,14 +15,62 @@
 /* FIXME: You may need to add #include directives, macro definitions,
    static function definitions, etc.  */
 
+struct commandIONode {
+	command_t c;
+	char** input;
+	char** output;
+	struct commandIONode *next;
+	struct commandIONode *prev;
+};
+
+struct commandIOList {
+	struct commandIONode *head;
+	struct commandIONode *tail;
+};
+
+typedef struct commandIONode *ionode_t;
+typedef struct commandIOList *iolist_t;
+/*
 struct DependencyGraph {
     int[][] reqMatrix;
     int[] numDeps;
 };
+*/
 
 typedef struct DependencyGraph *depG_t;
 
-depG_t generateDependecies(command_t rootComm) {
+void addIOList (iolist_t list, command_t c) {
+  ionode_t new_node = (ionode_t)malloc(sizeof(struct commandIONode)); 
+
+  new_node->c = c;
+  if (list->head == NULL)
+    list->head = new_node;
+  
+  if (list->tail == NULL)
+    list->tail = new_node;
+  else {	  
+    list->tail->next = new_node;
+    new_node->prev = list->tail;
+    list->tail = new_node;
+  }
+}
+
+void
+intoIOCommandList(command_t c, iolist_t list) {
+  if (c->type != SEQUENCE_COMMAND)
+	  addIOList(list, c);
+  else {
+    if (c->u.command[0] != NULL)
+	    intoIOCommandList(c->u.command[0], list);
+    if (c->u.command[1] != NULL)
+	    intoIOCommandList(c->u.command[1], list);
+  }
+}
+
+void generateDependecies(command_t c) {
+
+	iolist_t ioList = (iolist_t)malloc(sizeof(struct commandIOList));
+	intoIOCommandList(c, ioList);
 
 }
 
@@ -68,7 +116,8 @@ execute_command (command_t c, int time_travel)
   	  break;
   	case SEQUENCE_COMMAND:
       if (time_travel) {
-        depgG_t deps = generateDependecies(c);
+		 printf("time travel mode, start generate dependency\n");
+        generateDependecies(c);
         /* while deps->numDeps[i] != 0
           child = fork();
           if (child == 0)
