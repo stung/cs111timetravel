@@ -152,25 +152,11 @@ execute_command (command_t c, int time_travel)
             error(1, 0, "Cannot generate child process!");
           }
         }
-
-        while(deps->numDeps[i] == 0) {
-
-        }
-	   */
-        /* while deps->numDeps[i] != 0
-          child = fork();
-          if (child == 0)
-            execute_command(deps[i][j], 0);
-            etc etc
-          else if (child > 0)
-            continue;
-          else
-            error(1, 0, "Could not generate child!");
         */
       } else {
     	  // execute both commands sequentially
-    	  execute_command(c->u.command[0], time_travel);
-    	  execute_command(c->u.command[1], time_travel);
+    	  execute_command(c->u.command[0], 0);
+    	  execute_command(c->u.command[1], 0);
     	  c->status = c->u.command[1]->status; // sets status to second command
       }
   	  break;
