@@ -126,6 +126,13 @@ void setDep(depG_t g, ionode_t n, int index) {
 			g->reqMatrix[index][depIndex] = 1;
 		i++;
 	}
+	int j = 0;
+	while (*(n->output + j) != NULL) {
+		int depIndex = findOutputFile(n->prev, *(n->output + j), index - 1);
+		if (depIndex != -1)
+			g->reqMatrix[index][depIndex] = 1;
+		i++;
+	}
 	updateNumDeps(g, index);
 }
 
