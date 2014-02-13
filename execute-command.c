@@ -160,17 +160,31 @@ execute_command (command_t c, int time_travel)
   	   printf("time travel mode, start generate dependency\n");
        depGraph = generateDependecies(c);
        ionode_t commHead = depGraph->commandList->head;
+       ionode_t lastComm;
+       pid_t lastChild;
+       char isLastComm = 0;
+
        while (commHead != NULL) {
         child = fork();
         if (child == 0) { // child process
           execute_command(commHead->c, 0);
+          c->status = commHead->c->status;
           break;
         } else if (child > 0) { // parent process
+          lastChild = child;
+          lastComm = commHead;
           commHead = commHead->next;
+          if (commHead == NULL)
+            isLastComm = 1;
           continue;
         } else {
           error(1, 0, "Cannot generate child process!");
         }
+       }
+       if (isLastComm) {
+         // wait for child process
+         waitpid(lastChild, &status, 0);
+         c->status = status;
        }
         /*
 	   depgG_t deps = generateDependecies(c);
