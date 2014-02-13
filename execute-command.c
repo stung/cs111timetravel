@@ -41,6 +41,34 @@ struct DependencyGraph {
 
 typedef struct DependencyGraph *depG_t;
 
+struct childNode {
+  pid_t child;
+  struct childNode *next;
+};
+
+struct childList {
+  struct childNode *head;
+  struct childNode *tail;
+};
+
+typedef struct childNode *cnode_t;
+typedef struct childList *clist_t;
+
+void addChildList (clist_t list, pid_t child) {
+  cnode_t new_node = (cnode_t)malloc(sizeof(struct childNode));
+
+  new_node->child = child;
+  if (list->head == NULL)
+    list->head = new_node;
+  if (list->tail == NULL)
+    list->tail = new_node;
+  else {
+    list->tail->next = new_node;
+    list->tail = new_node;
+  }
+}
+
+// adds to the doubly linked sequence command list
 void addIOList (iolist_t list, command_t c) {
   ionode_t new_node = (ionode_t)malloc(sizeof(struct commandIONode)); 
 
@@ -57,6 +85,8 @@ void addIOList (iolist_t list, command_t c) {
   }
 }
 
+// traverses the command tree
+// adds individual sequence commands in order of execution
 void
 intoIOCommandList(command_t c, iolist_t list) {
   if (c->type != SEQUENCE_COMMAND)
@@ -69,6 +99,8 @@ intoIOCommandList(command_t c, iolist_t list) {
   }
 }
 
+// traverses the sequence command node
+// finds all input/outputs and adds them to the node data members
 void findCommandIO(ionode_t node, command_t c) {
   if (c->input != 0) {
 	  int i = 0;
@@ -96,6 +128,7 @@ void findCommandIO(ionode_t node, command_t c) {
   }
 }
 
+// searches for dependencies
 int findOutputFile(ionode_t n, char* fileName, int index) {
 	int i = 0;
 	while (*(n->output + i) != NULL) {
@@ -109,6 +142,7 @@ int findOutputFile(ionode_t n, char* fileName, int index) {
 		return findOutputFile(n->prev, fileName, index - 1);
 }
 
+// updates numDeps according to reqMatrix
 void updateNumDeps(depG_t g, int index) {
 	int depTotal = 0;
 	int tmp;
@@ -118,6 +152,7 @@ void updateNumDeps(depG_t g, int index) {
 	g->numDeps[index] = depTotal;
 }
 
+// initially sets reqMatrix
 void setDep(depG_t g, ionode_t n, int index) {
 	int i = 0;
 	while (*(n->input + i) != NULL) {
@@ -129,12 +164,13 @@ void setDep(depG_t g, ionode_t n, int index) {
 	updateNumDeps(g, index);
 }
 
+// generates the dependency graph for command c
 depG_t generateDependecies(command_t c) {
 	iolist_t ioList = (iolist_t)malloc(sizeof(struct commandIOList));
 	depG_t depGraph = (depG_t)malloc(sizeof(struct DependencyGraph));
 
-     intoIOCommandList(c, ioList);
-     depGraph->commandList = ioList;
+  intoIOCommandList(c, ioList);
+  depGraph->commandList = ioList;
 	
 	ionode_t tmpNode = ioList->head;
 	int num = 0;
@@ -162,6 +198,45 @@ depG_t generateDependecies(command_t c) {
 	}
 
      return depGraph;
+}
+
+// runs all of the commands until empty
+void runDependencies(depG_t g, int* run_array, command_t* comm_array) {
+  pid_t child;
+  int status;
+  ionode_t commHead = g->commandList->head;
+  clist_t child_list = (clist_t)malloc(sizeof(struct childList));
+
+  int i;
+  for(i = 0; i < g->numCommands; i++) {
+    if (g->numDeps[i] == 0) {
+      if (run_array[i] == 0) {
+        run_array[i] = 1;
+        child = fork();
+        if (child == 0) { // child process
+          execute_command(comm_array[i], 0);
+          return;
+        } else if (child > 0) { // parent process
+          addChildList(child_list, child);
+          continue;
+        } else {
+          error(1, 0, "Cannot generate child process!");
+        }
+      }
+    }
+  }
+
+  cnode_t nodeHead = child_list->head;
+  while(nodeHead != NULL) {
+    waitpid(nodeHead->child, &status, 0);
+    nodeHead = nodeHead->next;
+  }
+
+  for (i = 0; i < g->numCommands; i++) {
+    if (run_array[i] == 0)
+      runDependencies(g, run_array, comm_array);
+  }
+  return;
 }
 
 int
@@ -208,7 +283,20 @@ execute_command (command_t c, int time_travel)
   	case SEQUENCE_COMMAND:
       if (time_travel) {
        depGraph = generateDependecies(c);
+       int num = depGraph->numCommands;
        ionode_t commHead = depGraph->commandList->head;
+
+       command_t* comm_array = (command_t *)calloc(num, sizeof(command_t));
+       int *run_array = (int *)calloc(num, sizeof(int));
+       int i;
+       for (i = 0; i < num; i++) {
+        comm_array[i] = commHead->c;
+        commHead = commHead->next;
+       }
+
+       runDependencies(depGraph, run_array, comm_array);
+
+       /*
        ionode_t lastComm;
        pid_t lastChild;
        char isLastComm = 0;
@@ -235,24 +323,7 @@ execute_command (command_t c, int time_travel)
          waitpid(lastChild, &status, 0);
          c->status = status;
        }
-        /*
-	   depgG_t deps = generateDependecies(c);
-        int i = 0;
-        for (; i < deps->numCommands; i++) {
-          child = fork();
-          if (child == 0) { // child process
-            // FIXME: execute_command(), which command?
-          } else if (child > 0) { // parent process
-            if (deps->numDeps[i] == 0) {
-              continue;
-            } else {
-              waitpid(child, &status, 0); // wait for child to complete
-            }
-          } else {
-            error(1, 0, "Cannot generate child process!");
-          }
-        }
-        */
+       */
       } else {
     	  // execute both commands sequentially
     	  execute_command(c->u.command[0], 0);
