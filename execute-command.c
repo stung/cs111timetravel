@@ -11,6 +11,7 @@
 #include <sys/wait.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 /* FIXME: You may need to add #include directives, macro definitions,
    static function definitions, etc.  */
@@ -68,10 +69,45 @@ intoIOCommandList(command_t c, iolist_t list) {
   }
 }
 
+void findCommandIO(ionode_t node, command_t c) {
+  if (c->input != 0) {
+	  int i = 0;
+	  while(*(node->input + i) != NULL) {
+		  i++;
+	  }
+	  unsigned dataLength = strlen(c->input);
+	  *(node->input + i) = (char *)malloc(sizeof(char *) * dataLength);
+	  strncpy(*(node->input + i), c->input, dataLength);
+  }
+  if (c->output != 0) {
+	  int j = 0;
+	  while(*(node->output + j) != NULL) {
+		  j++;
+	  }
+	  unsigned dataLength = strlen(c->output);
+	  *(node->output + j) = (char *)malloc(sizeof(char *) * dataLength);
+	  strncpy(*(node->output + j), c->output, dataLength);
+  }
+  if (c->type == AND_COMMAND || c->type == OR_COMMAND || c->type == PIPE_COMMAND) {
+	  findCommandIO(node, c->u.command[0]);
+	  findCommandIO(node, c->u.command[1]);
+  } else if (c->type == SUBSHELL_COMMAND) {
+	  findCommandIO(node, c->u.subshell_command);
+  }
+}
+
 void generateDependecies(command_t c) {
 
 	iolist_t ioList = (iolist_t)malloc(sizeof(struct commandIOList));
 	intoIOCommandList(c, ioList);
+
+	ionode_t tmpNode = ioList->head;
+	while(tmpNode != NULL) {
+	  tmpNode->input = (char **)malloc(sizeof(char **) * 20); //FIXME: CANNOT BE STATIC
+	  tmpNode->output = (char **)malloc(sizeof(char **) * 20); //FIXME: CANNOT BE STATIC
+	  findCommandIO(tmpNode, tmpNode->c);
+	  tmpNode = tmpNode->next;
+	}
 
 }
 
