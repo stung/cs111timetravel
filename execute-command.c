@@ -31,13 +31,13 @@ struct commandIOList {
 
 typedef struct commandIONode *ionode_t;
 typedef struct commandIOList *iolist_t;
-/*
+
 struct DependencyGraph {
-    int[][] reqMatrix;
-    int[] numDeps;
+    int** reqMatrix;
+    int* numDeps;
     int numCommands;
+    iolist_t commandList;
 };
-*/
 
 typedef struct DependencyGraph *depG_t;
 
@@ -96,11 +96,13 @@ void findCommandIO(ionode_t node, command_t c) {
   }
 }
 
-void generateDependecies(command_t c) {
-
+depG_t generateDependecies(command_t c) {
 	iolist_t ioList = (iolist_t)malloc(sizeof(struct commandIOList));
-	intoIOCommandList(c, ioList);
+	depG_t depGraph = (depG_t)malloc(sizeof(struct DependencyGraph));
 
+     intoIOCommandList(c, ioList);
+     depGraph->commandList = ioList;
+	
 	ionode_t tmpNode = ioList->head;
 	while(tmpNode != NULL) {
 	  tmpNode->input = (char **)malloc(sizeof(char **) * 20); //FIXME: CANNOT BE STATIC
@@ -109,6 +111,7 @@ void generateDependecies(command_t c) {
 	  tmpNode = tmpNode->next;
 	}
 
+     return depGraph;
 }
 
 int
@@ -127,6 +130,7 @@ execute_command (command_t c, int time_travel)
   pid_t child; // keeping track of the child process
   int status; // exit status
   int fd[2]; // array for file descriptors
+  depG_t depGraph = NULL; // dependency graph pointer
 
   switch (c->type) {
   	case AND_COMMAND:
@@ -153,8 +157,21 @@ execute_command (command_t c, int time_travel)
   	  break;
   	case SEQUENCE_COMMAND:
       if (time_travel) {
-	   printf("time travel mode, start generate dependency\n");
-        generateDependecies(c);
+  	   printf("time travel mode, start generate dependency\n");
+       depGraph = generateDependecies(c);
+       ionode_t commHead = depGraph->commandList->head;
+       while (commHead != NULL) {
+        child = fork();
+        if (child == 0) { // child process
+          execute_command(commHead->c, 0);
+          break;
+        } else if (child > 0) { // parent process
+          commHead = commHead->next;
+          continue;
+        } else {
+          error(1, 0, "Cannot generate child process!");
+        }
+       }
         /*
 	   depgG_t deps = generateDependecies(c);
         int i = 0;
