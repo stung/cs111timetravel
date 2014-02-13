@@ -606,12 +606,13 @@ command_stream_t rpnToCommTree(token_node_t inRPNTokens) {
         readData->output = 0;
 
         // popping out the command to be subshelled
-        ctnode_t subshellnode = NULL;
-        subshellnode = ctPop(outCommStream);
+        ctnode_t subShellCommand = NULL;
+        subShellCommand = ctPop(outCommStream);
 
         // set our new command union command, push it back onto the stack
-        readData->u.subshell_command = subshellnode->currCommand;
-        ctPush(outCommStream, subshellnode->currCommand);
+        readData->u.subshell_command = subShellCommand->currCommand;
+	   readData->type = SUBSHELL_COMMAND;
+        ctPush(outCommStream, readData);
 	      break;
       case REDIRECT_MORE:
         inRPNTokens = inRPNTokens->next_token;
