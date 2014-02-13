@@ -428,26 +428,28 @@ token_node_t inToRPN(token_node_t inTokens) {
         break;
       case SEMICOLON:
 	   checkIfSimpleOrSubshell(rpnTokens_end);
-	   checkIfSimpleOrSubshell(inTokens->next_token);
+	   if (inTokens->next_token->comType != NEWLINE) {
+	   	checkIfSimpleOrSubshell(inTokens->next_token);
 
-        readNode = operatorStack->topNode;
-        if (readNode == NULL) {
-          push(operatorStack, inTokens->token, inTokens->comType);
-        } else if (strcmp(readNode->token, "(") == 0) {
-          push(operatorStack, inTokens->token, inTokens->comType);
-        } else if (strcmp(readNode->token, ";") == 0) {
-          readNode = pop(operatorStack);
-          rpnTokens_end = insert_at_end(rpnTokens_end, readNode->token, readNode->comType);
-          push(operatorStack, inTokens->token, inTokens->comType);
-	   } else {
-          while ((readNode = pop(operatorStack)) != NULL) {
+          readNode = operatorStack->topNode;
+          if (readNode == NULL) {
+            push(operatorStack, inTokens->token, inTokens->comType);
+          } else if (strcmp(readNode->token, "(") == 0) {
+            push(operatorStack, inTokens->token, inTokens->comType);
+          } else if (strcmp(readNode->token, ";") == 0) {
+            readNode = pop(operatorStack);
             rpnTokens_end = insert_at_end(rpnTokens_end, readNode->token, readNode->comType);
-            if (strcmp(readNode->token, "(") == 0) {
-      		    push(operatorStack, readNode->token, readNode->comType);
-              break;
+            push(operatorStack, inTokens->token, inTokens->comType);
+	     } else {
+            while ((readNode = pop(operatorStack)) != NULL) {
+              rpnTokens_end = insert_at_end(rpnTokens_end, readNode->token, readNode->comType);
+              if (strcmp(readNode->token, "(") == 0) {
+      	      push(operatorStack, readNode->token, readNode->comType);
+                break;
+              }
             }
-          }
-		push(operatorStack, inTokens->token, inTokens->comType);
+		  push(operatorStack, inTokens->token, inTokens->comType);
+	     }
 	   }
         break;
       default:
