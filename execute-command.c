@@ -34,6 +34,7 @@ typedef struct commandIOList *iolist_t;
 struct DependencyGraph {
     int[][] reqMatrix;
     int[] numDeps;
+    int numCommands;
 };
 */
 
@@ -116,8 +117,30 @@ execute_command (command_t c, int time_travel)
   	  break;
   	case SEQUENCE_COMMAND:
       if (time_travel) {
-		 printf("time travel mode, start generate dependency\n");
+	   printf("time travel mode, start generate dependency\n");
         generateDependecies(c);
+        /*
+	   depgG_t deps = generateDependecies(c);
+        int i = 0;
+        for (; i < deps->numCommands; i++) {
+          child = fork();
+          if (child == 0) { // child process
+            // FIXME: execute_command(), which command?
+          } else if (child > 0) { // parent process
+            if (deps->numDeps[i] == 0) {
+              continue;
+            } else {
+              waitpid(child, &status, 0); // wait for child to complete
+            }
+          } else {
+            error(1, 0, "Cannot generate child process!");
+          }
+        }
+
+        while(deps->numDeps[i] == 0) {
+
+        }
+	   */
         /* while deps->numDeps[i] != 0
           child = fork();
           if (child == 0)
