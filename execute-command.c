@@ -15,6 +15,17 @@
 /* FIXME: You may need to add #include directives, macro definitions,
    static function definitions, etc.  */
 
+struct DependencyGraph {
+    int[][] reqMatrix;
+    int[] numDeps;
+};
+
+typedef struct DependencyGraph *depG_t;
+
+depG_t generateDependecies(command_t rootComm) {
+
+}
+
 int
 command_status (command_t c)
 {
@@ -27,9 +38,6 @@ execute_command (command_t c, int time_travel)
   /* FIXME: Replace this with your implementation.  You may need to
      add auxiliary functions and otherwise modify the source code.
      You can also use external functions defined in the GNU C Library.  */
-  if (time_travel) {
-  	error(1, 0, "Time travel not implemented yet");
-  }
 
   pid_t child; // keeping track of the child process
   int status; // exit status
@@ -59,10 +67,24 @@ execute_command (command_t c, int time_travel)
   	  }
   	  break;
   	case SEQUENCE_COMMAND:
-  	  // execute both commands sequentially
-  	  execute_command(c->u.command[0], time_travel);
-  	  execute_command(c->u.command[1], time_travel);
-  	  c->status = c->u.command[1]->status; // sets status to second command
+      if (time_travel) {
+        depgG_t deps = generateDependecies(c);
+        /* while deps->numDeps[i] != 0
+          child = fork();
+          if (child == 0)
+            execute_command(deps[i][j], 0);
+            etc etc
+          else if (child > 0)
+            continue;
+          else
+            error(1, 0, "Could not generate child!");
+        */
+      } else {
+    	  // execute both commands sequentially
+    	  execute_command(c->u.command[0], time_travel);
+    	  execute_command(c->u.command[1], time_travel);
+    	  c->status = c->u.command[1]->status; // sets status to second command
+      }
   	  break;
   	case PIPE_COMMAND:
   	  // redirects output of cmd1 into cmd2
@@ -133,7 +155,7 @@ execute_command (command_t c, int time_travel)
   	  }
   	  break;
   	case SUBSHELL_COMMAND:
-  	  execute_command(c->u.subshell_command, time_travel);
+  	  execute_command(c->u.subshell_command, 0);
   	  break;
   	default:
   	  break;
