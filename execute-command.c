@@ -267,10 +267,6 @@ command_status (command_t c)
 void
 execute_command (command_t c, int time_travel)
 {
-  /* FIXME: Replace this with your implementation.  You may need to
-     add auxiliary functions and otherwise modify the source code.
-     You can also use external functions defined in the GNU C Library.  */
-
   pid_t child; // keeping track of the child process
   int status; // exit status
   int fd[2]; // array for file descriptors
@@ -301,6 +297,7 @@ execute_command (command_t c, int time_travel)
   	  break;
   	case SEQUENCE_COMMAND:
       if (time_travel) {
+       // generate dependency graph
        depGraph = generateDependecies(c);
        int num = depGraph->numCommands;
        ionode_t commHead = depGraph->commandList->head;
@@ -308,41 +305,15 @@ execute_command (command_t c, int time_travel)
        command_t* comm_array = (command_t *)calloc(num, sizeof(command_t));
        int *run_array = (int *)calloc(num, sizeof(int));
        int i;
+
+       // create an array of commands
        for (i = 0; i < num; i++) {
         comm_array[i] = commHead->c;
         commHead = commHead->next;
        }
 
+       // run all of the independent commands in parallel
        runDependencies(depGraph, run_array, comm_array);
-
-       /*
-       ionode_t lastComm;
-       pid_t lastChild;
-       char isLastComm = 0;
-
-       while (commHead != NULL) {
-        child = fork();
-        if (child == 0) { // child process
-          execute_command(commHead->c, 0);
-          c->status = commHead->c->status;
-          break;
-        } else if (child > 0) { // parent process
-          lastChild = child;
-          lastComm = commHead;
-          commHead = commHead->next;
-          if (commHead == NULL)
-            isLastComm = 1;
-          continue;
-        } else {
-          error(1, 0, "Cannot generate child process!");
-        }
-       }
-       if (isLastComm) {
-         // wait for child process
-         waitpid(lastChild, &status, 0);
-         c->status = status;
-       }
-       */
       } else {
     	  // execute both commands sequentially
     	  execute_command(c->u.command[0], 0);
