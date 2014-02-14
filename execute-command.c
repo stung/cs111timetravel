@@ -103,7 +103,7 @@ intoIOCommandList(command_t c, iolist_t list) {
 // finds all input/outputs and adds them to the node data members
 void findCommandIO(ionode_t node, command_t c) {
   if (c->input != 0) {
-	  int i = 0;
+  	  int i = 0;
 	  while(*(node->input + i) != NULL) {
 		  i++;
 	  }
@@ -111,6 +111,7 @@ void findCommandIO(ionode_t node, command_t c) {
 	  *(node->input + i) = (char *)malloc(sizeof(char *) * dataLength);
 	  strncpy(*(node->input + i), c->input, dataLength);
   }
+
   if (c->output != 0) {
 	  int j = 0;
 	  while(*(node->output + j) != NULL) {
@@ -119,6 +120,24 @@ void findCommandIO(ionode_t node, command_t c) {
 	  unsigned dataLength = strlen(c->output);
 	  *(node->output + j) = (char *)malloc(sizeof(char *) * dataLength);
 	  strncpy(*(node->output + j), c->output, dataLength);
+  	  
+  	  // Put all the word in c->u.word in the file input list except those start with '-'
+	  int i = 0;
+	  while(*(node->input + i) != NULL) {
+		  i++;
+	  }
+  	  int k = 0;
+	  while(*(c->u.word + k) != NULL) {
+		char* in = *(c->u.word + k);
+	  	unsigned dataLength = strlen(in);
+		if (dataLength > 0)
+			if (in[0] != '-') {
+	  			*(node->input + i) = (char *)malloc(sizeof(char *) * dataLength);
+	  			strncpy(*(node->input + i), in, dataLength);
+	  			i++;
+			}
+		k++;
+	  }
   }
   if (c->type == AND_COMMAND || c->type == OR_COMMAND || c->type == PIPE_COMMAND) {
 	  findCommandIO(node, c->u.command[0]);
