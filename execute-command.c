@@ -16,6 +16,9 @@
 /* FIXME: You may need to add #include directives, macro definitions,
    static function definitions, etc.  */
 
+#define MAXPROCESS 100
+int numProcess = 0;
+
 struct commandIONode {
 	command_t c;
 	char** input;
@@ -287,6 +290,7 @@ void
 execute_command (command_t c, int time_travel)
 {
   pid_t child; // keeping track of the child process
+  pid_t groupid; // returns the group id
   int status; // exit status
   int fd[2]; // array for file descriptors
   depG_t depGraph = NULL; // dependency graph pointer
@@ -375,6 +379,8 @@ execute_command (command_t c, int time_travel)
   	  break;
   	case SIMPLE_COMMAND:
   	  // allow the kernel to execute the command
+      groupid = getpgrp();
+
   	  child = fork();
   	  if (child == 0) { // child process
   	  	// handle redirects
@@ -401,6 +407,7 @@ execute_command (command_t c, int time_travel)
   	  } else if (child > 0) { // parent process, pid of the child process returned
   	  	// wait for child process
   	  	waitpid(child, &status, 0);
+        printf("%d", (int) groupid);
 
   	  	// read and store the exit status
   	  	c->status = status;
