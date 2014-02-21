@@ -20,6 +20,7 @@
 
 #define MAXPROCESS 100
 int numProcess = 0;
+pid_t lastPID = 0;
 
 struct commandIONode {
 	command_t c;
@@ -295,18 +296,26 @@ void watchdog(pid_t gid) {
   DIR *procDir;
   struct dirent *readProc;
   char *dirname;
+  char procName[7] = "/proc/";
+  char statName[6] = "/stat";
 
   FILE *statusFile;
   char fileName[30]; // file name will not exceed this limit
+  char mode[2] = "r";
+
+  int statPid;
+  char statComm[30];
+  char statState;
+  int statPpid;
+  int statPgrp;
+
   int i;
+  // We check to see if the last PID retrieved is the same as the last run's
+  // If so, odds are new processes have not been forked
+  pid_t currLastPID = 0; 
+  int currNumProcess = 0;
 
-  int firstScan;
-  char secondScan[30];
-  char thirdScan;
-  int fourthScan;
-  int fifthScan;
-
-  procDir = opendir("/proc");
+  procDir = opendir(procName);
   while ((readProc = readdir(procDir))) {
     dirname = readProc->d_name;
 
@@ -314,24 +323,43 @@ void watchdog(pid_t gid) {
     // indicates its pid
     if ((dirname[0] < 48) || (dirname[0] > 57))
         continue;
-    strncpy(fileName, "/proc/", 7); // length of "/proc/"
+    strncpy(fileName, procName, 7); // length of "/proc/"
     strncat(fileName, dirname, 10); // pid should not exceed 10 digits
-    strncat(fileName, "/stat", 6); // length of "/stat"
+    strncat(fileName, statName, 6); // length of "/stat"
 
-    statusFile = fopen(fileName, "r"); // read only for file
-
-    fscanf(statusFile, "%d %s %c %d %d", &firstScan, secondScan,
-                                &thirdScan, &fourthScan, &fifthScan);
-    puts(dirname);
-    secondScan;
-
-    if ((int)gid == fifthScan) {
-      printf("We found %d!\n", fifthScan);
+    statusFile = fopen(fileName, mode); // read only for file
+    if (statusFile == NULL) {
+      printf("%s\n", strerror(errno));
+      error(1, 0, "Could not open file");
     }
+
+    fscanf(statusFile, "%d %30s %c %d %d", &statPid, statComm,
+                                &statState, &statPpid, &statPgrp);
+
+    if ((int)gid == statPgrp) {
+      printf("We found %d! PID %d\n", statPgrp, statPid);
+      currNumProcess++;
+      currLastPID = statPid;
+      if (currLastPID != lastPID) {
+        printf("Updating numProcess from %d to %d\n", numProcess, currNumProcess);
+        numProcess = currNumProcess;
+      }
+    }
+
+
+    if (numProcess > MAXPROCESS) {
+      printf("EXITING WATCHDOG");
+      killpg(gid, SIGKILL);
+      numProcess = 0;
+      return;
+    }
+    fclose(statusFile);
   }
+  // sets the global lastPID var to the current last PID
+  // if different on the next run, we will not update numProcess
+  lastPID = currLastPID; 
   // close directories and files after done
   closedir(procDir);
-  fclose(statusFile);
 }
 
 void
