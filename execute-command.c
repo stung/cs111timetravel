@@ -298,11 +298,13 @@ void watchdog(pid_t gid) {
 
   FILE *statusFile;
   char fileName[30]; // file name will not exceed this limit
-  char tmpGID[30];
-  char fileGID[30];
-  long int intFileGID;
-  char *end;
   int i;
+
+  int firstScan;
+  char secondScan[30];
+  char thirdScan;
+  int fourthScan;
+  int fifthScan;
 
   procDir = opendir("/proc");
   while ((readProc = readdir(procDir))) {
@@ -312,24 +314,19 @@ void watchdog(pid_t gid) {
     // indicates its pid
     if ((dirname[0] < 48) || (dirname[0] > 57))
         continue;
-    strncpy(fileName, "/proc/", 7); // length of "/proc"
+    strncpy(fileName, "/proc/", 7); // length of "/proc/"
     strncat(fileName, dirname, 10); // pid should not exceed 10 digits
-    strncat(fileName, "/status", 8); // length of "/status"
+    strncat(fileName, "/stat", 6); // length of "/stat"
 
     statusFile = fopen(fileName, "r"); // read only for file
 
-    for (i = 0; i < 3; i++) {
-      fgets(tmpGID, 30, statusFile); // groupd ID should be in the format "Tgid:  xxxxx"
-    }
+    fscanf(statusFile, "%d %s %c %d %d", &firstScan, secondScan,
+                                &thirdScan, &fourthScan, &fifthScan);
+    puts(dirname);
+    secondScan;
 
-    // creating a substring that removes the "Tgid:\t"; 6 digits
-    // gid should not exceed 10 digits
-    strncpy(fileGID, tmpGID + 6, 10);
-
-    intFileGID = strtol(fileGID, &end, 10);
-
-    if ((int)gid == (int)intFileGID) {
-      printf("We found %d!\n", (int)intFileGID);
+    if ((int)gid == fifthScan) {
+      printf("We found %d!\n", fifthScan);
     }
   }
   // close directories and files after done
@@ -458,10 +455,18 @@ execute_command (command_t c, int time_travel)
   	  } else if (child > 0) { // parent process, pid of the child process returned
   	  	// wait for child process
         printf("Group ID is %d\n", (int)groupid);
+        int i = 0;
+        while((waitpid(child, &status, WNOHANG)) == 0) {
+          printf("On round %d\n", i);
+          watchdog(groupid);
+          i++;
+        }
+  /*
   	  	while((waitpid(child, &status, 0) != 0)) {
+          printf("running watchdog %d times\n", i);
           watchdog(groupid);
         }
-
+*/
   	  	// read and store the exit status
   	  	c->status = status;
   	  } else {
