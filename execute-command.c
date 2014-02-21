@@ -337,10 +337,10 @@ void watchdog(pid_t gid) {
                                 &statState, &statPpid, &statPgrp);
 
     if ((int)gid == statPgrp) {
-      printf("We found %d! PID %d\n", statPgrp, statPid);
+      // printf("We found %d! PID %d\n", statPgrp, statPid);
       currNumProcess++;
       currLastPID = statPid;
-      if (currLastPID != lastPID) {
+      if (currLastPID > lastPID) {
         printf("Updating numProcess from %d to %d\n", numProcess, currNumProcess);
         numProcess = currNumProcess;
       }
