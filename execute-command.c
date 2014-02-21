@@ -3,6 +3,7 @@
 #include "command.h"
 #include "command-internals.h"
 
+#include <errno.h>
 #include <error.h>
 #include <unistd.h>
 #include <fcntl.h>
@@ -12,6 +13,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <dirent.h>
 
 /* FIXME: You may need to add #include directives, macro definitions,
    static function definitions, etc.  */
@@ -286,6 +288,55 @@ command_status (command_t c)
   return c->status;
 }
 
+// scan processes in /proc
+// updates our total number of processes
+// ASSUMES you are running process in a Linux environment!
+void watchdog(pid_t gid) {
+  DIR *procDir;
+  struct dirent *readProc;
+  char *dirname;
+
+  FILE *statusFile;
+  char fileName[30]; // file name will not exceed this limit
+  char tmpGID[30];
+  char fileGID[30];
+  long int intFileGID;
+  char *end;
+  int i;
+
+  procDir = opendir("/proc");
+  while ((readProc = readdir(procDir))) {
+    dirname = readProc->d_name;
+
+    // only care about directory names that start with a number
+    // indicates its pid
+    if ((dirname[0] < 48) || (dirname[0] > 57))
+        continue;
+    strncpy(fileName, "/proc/", 7); // length of "/proc"
+    strncat(fileName, dirname, 10); // pid should not exceed 10 digits
+    strncat(fileName, "/status", 8); // length of "/status"
+
+    statusFile = fopen(fileName, "r"); // read only for file
+
+    for (i = 0; i < 3; i++) {
+      fgets(tmpGID, 30, statusFile); // groupd ID should be in the format "Tgid:  xxxxx"
+    }
+
+    // creating a substring that removes the "Tgid:\t"; 6 digits
+    // gid should not exceed 10 digits
+    strncpy(fileGID, tmpGID + 6, 10);
+
+    intFileGID = strtol(fileGID, &end, 10);
+
+    if ((int)gid == (int)intFileGID) {
+      printf("We found %d!\n", (int)intFileGID);
+    }
+  }
+  // close directories and files after done
+  closedir(procDir);
+  fclose(statusFile);
+}
+
 void
 execute_command (command_t c, int time_travel)
 {
@@ -406,8 +457,10 @@ execute_command (command_t c, int time_travel)
   	  	error(1, 0, "Cannot execute command!"); // if we go beyond the execvp
   	  } else if (child > 0) { // parent process, pid of the child process returned
   	  	// wait for child process
-  	  	waitpid(child, &status, 0);
-        printf("%d", (int) groupid);
+        printf("Group ID is %d\n", (int)groupid);
+  	  	while((waitpid(child, &status, 0) != 0)) {
+          watchdog(groupid);
+        }
 
   	  	// read and store the exit status
   	  	c->status = status;
