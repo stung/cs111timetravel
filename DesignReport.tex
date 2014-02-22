@@ -119,23 +119,13 @@ kill the processes before they cause our kernel to crash.
 \section{Design Overview}
 
 To start, we define a maximum number of processes that our shell (which is 
-itself a process) can fork at any given time. This will be our \textbf{hard  
-limit}; upon reaching this limit, we will kill the shell and any processes that
-were forked from it to begin with. By checking the group process ID (GPID) of 
-our shell function, we will be able to count how many other processes have the 
-same GPID. We can also verify this through \textbf{pstree}, which creates a
-tree of processes that we can refer to when forking. \\
-We will also attempt to ensure fairness towards other running processes in the
-system by lowering the priority of our shell if it starts to generate a large
-number of forked processes. This will be our \textbf{soft limit}, as we will
-attempt to slow the forking process first when we reach this limit, rather 
-than kill it outright. We assume that when a process hits this limit, it is
-possible that it is not a malicious program, and that it just needs more forked
-processes than the norm. Therefore, we slow down the forking process to allow 
-more time for its previously forked processes to catch up and finish. In the
-event that it is indeed a malicious program (or a process that unintentionally 
-created an infinite forking loop), then we should take appropriate action when 
-we reach the hard limit and kill the process. \\
+itself a process) can fork at any given time. This will be our hard upper 
+limit; upon reaching this limit, we will kill the shell and any processes that
+were forked from it to begin with. \\
+
+
+First, we aim to limit the maximum number of processes that our shell can fork at any given time.  If a process hits the limit, we will kill it if it continues to attempt to fork.
+Second, we want to ensure fairness in other programs by checking the number of children that a parent has forked using pstree.  When the number of processes exceed a certain limit, we will start increasing its nice factor to slowdown its forking.
 
 % \begin{tabular}{ll}
 % Mass of empty crucible & \SI{7.28}{g}\\
@@ -150,7 +140,6 @@ we reach the hard limit and kill the process. \\
 %----------------------------------------------------------------------------------------
 
 \section{The Security Principles of Saltzer and Schroeder}
-Blahblahblah \\
 
 % \begin{tabular}{ll}
 % Mass of magnesium metal & = \SI{8.59}{g} - \SI{7.28}{g}\\
@@ -168,7 +157,6 @@ Blahblahblah \\
 
 \section{Threat Model}
 
-Blahblahblah \\
 % The atomic weight of magnesium is concluded to be \SI{24}{g/mol}, as determined by the stoichiometry of its chemical combination with oxygen. This result is in agreement with the accepted value.
 
 % \begin{figure}[h]
@@ -182,6 +170,7 @@ Blahblahblah \\
 %	SECTION 5
 %----------------------------------------------------------------------------------------
 
+<<<<<<< HEAD
 \section{Implementation}
 In this section, we will discuss the details of our design implementation. We
 have broken it down into the following modules:
@@ -210,6 +199,9 @@ We did this implementation in the function watchdog in execute-command.c.  To ge
 
 \subsection{Environment}
 At first, we run our program on UCLA CS lion server.  However, as we tried to test our program and let it fork as much as it can, it will let the server out of usage.  After that, we change our environment to the cs111 distribution on virtual machine.  Even if we crash the shell, we just need to reboot it then everything is good again.  We won’t affect other users like what we did on the server. \\ 
+=======
+\section{Penetration Testing}
+>>>>>>> 496ac39ad18fa3f21db1db04d0fe488df4b9803b
 
 %----------------------------------------------------------------------------------------
 %	SECTION 6

@@ -10,6 +10,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
+#include <sys/resource.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -19,6 +20,10 @@
    static function definitions, etc.  */
 
 #define MAXPROCESS 100
+#define LIMIT1 MAXPROCESS/4
+#define LIMIT2 MAXPROCESS/4*2
+#define LIMIT3 MAXPROCESS/4*3
+
 int numProcess = 0;
 pid_t lastPID = 0;
 
@@ -304,7 +309,7 @@ void watchdog(pid_t gid) {
   char mode[2] = "r";
 
   int statPid;
-  char statComm[30]; // name of process should not exceed this limit 
+  char statComm[30];
   char statState;
   int statPpid;
   int statPgrp;
@@ -333,25 +338,37 @@ void watchdog(pid_t gid) {
       error(1, 0, "Could not open file");
     }
 
-    fscanf(statusFile, "%d %s %c %d %d", &statPid, statComm,
+    fscanf(statusFile, "%d %30s %c %d %d", &statPid, statComm,
                                 &statState, &statPpid, &statPgrp);
 
     if ((int)gid == statPgrp) {
-      // printf("We found %d! PID %d\n", statPgrp, statPid);
+      //printf("We found %d! PID %d\n", statPgrp, statPid);
       currNumProcess++;
       currLastPID = statPid;
+
       if (currLastPID > lastPID) {
-        printf("Updating numProcess from %d to %d\n", numProcess, currNumProcess);
+        //printf("Updating numProcess from %d to %d\n", numProcess, currNumProcess);
         numProcess = currNumProcess;
+      
+ 
+	   if (numProcess == LIMIT1) {
+          setpriority(PRIO_PGRP, statPgrp, 5);
+	     printf("WARNING: Unusually high number of resources\n");
+   	   } else if (numProcess == LIMIT2) {
+          setpriority(PRIO_PGRP, statPgrp, 10);
+	     printf("WARNING: Lowering priority of running processes\n");
+    	   } else if (numProcess == LIMIT3) {
+          setpriority(PRIO_PGRP, statPgrp, 15);
+	     printf("WARNING: Reaching upper limit on running processes\n");
+        } else if (numProcess == MAXPROCESS) {
+          printf("KILLING PROCESSES\n");
+        } else if (numProcess > MAXPROCESS) {
+          printf("EXITING WATCHDOG");
+          killpg(gid, SIGKILL);
+          numProcess = 0;
+          return;
+        }
       }
-    }
-
-
-    if (numProcess > MAXPROCESS) {
-      printf("EXITING WATCHDOG");
-      killpg(gid, SIGKILL);
-      numProcess = 0;
-      return;
     }
     fclose(statusFile);
   }
@@ -482,10 +499,10 @@ execute_command (command_t c, int time_travel)
   	  	error(1, 0, "Cannot execute command!"); // if we go beyond the execvp
   	  } else if (child > 0) { // parent process, pid of the child process returned
   	  	// wait for child process
-        printf("Group ID is %d\n", (int)groupid);
+       // printf("Group ID is %d\n", (int)groupid);
         int i = 0;
         while((waitpid(child, &status, WNOHANG)) == 0) {
-          printf("On round %d\n", i);
+          //printf("On round %d\n", i);
           watchdog(groupid);
           i++;
         }
