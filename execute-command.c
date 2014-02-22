@@ -304,7 +304,7 @@ void watchdog(pid_t gid) {
   char mode[2] = "r";
 
   int statPid;
-  char statComm[30];
+  char statComm[30]; // name of process should not exceed this limit 
   char statState;
   int statPpid;
   int statPgrp;
@@ -333,7 +333,7 @@ void watchdog(pid_t gid) {
       error(1, 0, "Could not open file");
     }
 
-    fscanf(statusFile, "%d %30s %c %d %d", &statPid, statComm,
+    fscanf(statusFile, "%d %s %c %d %d", &statPid, statComm,
                                 &statState, &statPpid, &statPgrp);
 
     if ((int)gid == statPgrp) {
