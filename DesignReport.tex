@@ -27,6 +27,8 @@
 
 \usepackage{graphicx} % Required for the inclusion of images
 
+\usepackage[left=1in, right=1in]{geometry}
+
 \usepackage{fancyhdr}
 \pagestyle{fancy}
 \lhead{Li Tseng - 304272081}
@@ -170,13 +172,18 @@ Second, we want to ensure fairness in other programs by checking the number of c
 %	SECTION 5
 %----------------------------------------------------------------------------------------
 
-<<<<<<< HEAD
 \section{Implementation}
 In this section, we will discuss the details of our design implementation. We
 have broken it down into the following modules:
 \subsection{Polling the children}
 To make our design work, we needed to change our current \verb+execute_command+
-implementation. Instead of blocking in the parent process, waiting for the
+implementation. In our original implementation of lab 1b, we used 
+\verb+waitpid+ to block our parent process, only returning once the child had
+finished running. While perfectly adequate for the lab, we realized that in 
+order for us to continuously update the number of newly spawned processes, we
+would need to 
+
+Instead of blocking in the parent process, waiting for the
 child to finish, we instead introduce a \verb+WNOHANG+ flag, which indicates
 that we will continue to poll the child periodically to check on its status. \\
 Changing our implementation from blocking to polling had no noticeable effect
@@ -199,9 +206,6 @@ We did this implementation in the function watchdog in execute-command.c.  To ge
 
 \subsection{Environment}
 At first, we run our program on UCLA CS lion server.  However, as we tried to test our program and let it fork as much as it can, it will let the server out of usage.  After that, we change our environment to the cs111 distribution on virtual machine.  Even if we crash the shell, we just need to reboot it then everything is good again.  We won’t affect other users like what we did on the server. \\ 
-=======
-\section{Penetration Testing}
->>>>>>> 496ac39ad18fa3f21db1db04d0fe488df4b9803b
 
 %----------------------------------------------------------------------------------------
 %	SECTION 6
@@ -209,8 +213,12 @@ At first, we run our program on UCLA CS lion server.  However, as we tried to te
 
 \section{Penetration Testing}
 
-In this section, we will discuss 
+In this section, we will discuss the tests that we ran. This section will
+include the step-by-step instructions on how to run our demo against both good
+and malicious inputs.
 
+\subsection{Running the demo}
+\subsection{Designing the malicious input}
 \subsection{Time Testing}
 
 % The accepted value (periodic table) is \SI{24.3}{g/mol} \cite{Smith:2012qr}. The percentage discrepancy between the accepted value and the result obtained here is 1.3\%. Because only a single measurement was made, it is not possible to calculate an estimated standard deviation. \\
@@ -222,6 +230,10 @@ In this section, we will discuss
 %----------------------------------------------------------------------------------------
 
 \section{Robustness Analysis}
+
+In this section, we will analyze how effective our implementation was at
+detecting and killing process overload attacks, while still allowing other processes to go about their merry way.
+
 
 First, by limiting the maximum number of processes on the shell, we can prevent our shell from being overloaded since it will stop forking when it already has a certain number of processes.
 Second, by increasing the nice factor when a process trying to fork too many child processes, we can let it fork slower.  Hence, it won’t occupy the shared resources on the shell, which may let other users cannot use the resources. \\ 
@@ -246,13 +258,36 @@ Second, by increasing the nice factor when a process trying to fork too many chi
 
 \section{Results}
 
+In this section, we will discuss our results, document the known bugs in our 
+code, and close with the challenges that we encountered along the way.
 
 \subsection{Division of Work}
 Spencer implemented the process counting and killing, while Li implemented the
 process priority setting.
 
-\subsection{Challenges}
+\subsection{Known Bugs}
+When we run our infinite loop fork test, our shell very quickly detects and
+shuts down our shell. However, if we were to manually set the number of forked 
+processes per process, our shell begins to exhibit undefined behavior between 
+$i = 5$ and $i = 15$ forks per process. Anything less than 5 will complete
+before our watchdog detects it, and anything more than 15 will be detected by
+our watchdog and dealt with accordingly. But when we fork $5 - 15$ times per
+process, the shell begins to complain that it is unable to open the file, and
+seems to crash on its own volition. Other times, it would crash the first 
+command, yet still run the rest of the commands in our shell script. We were 
+unable to determine the cause of this bug.\\
+In addition, possibly owing to the fact that our hard limit is set to only
+$100$ processes, there is no significant deviation from a runtime of abou
+$20ms$, regardless of how many forked processes we introduce.
 
+\subsection{Challenges}
+We encountered a number of challenges along the way. Outside of the usual 
+debugging process, here were the main challenges that beset our progress:
+\subsubsection{Method to count the processes}
+\subsubsection{Polling the child's forked processes}
+In our original implementation of lab 1b, we would used \verb+waitpid+ to block
+the parent process, and only return when after the child had completed. 
+\subsubsection{Updating the nice level for all forked processes}
 
 
 %----------------------------------------------------------------------------------------

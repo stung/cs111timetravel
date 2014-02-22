@@ -320,6 +320,10 @@ void watchdog(pid_t gid) {
   pid_t currLastPID = 0; 
   int currNumProcess = 0;
 
+  char isLim1 = 0;
+  char isLim2 = 0;
+  char isLim3 = 0;
+
   procDir = opendir(procName);
   while ((readProc = readdir(procDir))) {
     dirname = readProc->d_name;
@@ -327,7 +331,7 @@ void watchdog(pid_t gid) {
     // only care about directory names that start with a number
     // indicates its pid
     if ((dirname[0] < 48) || (dirname[0] > 57))
-        continue;
+      continue;
     strncpy(fileName, procName, 7); // length of "/proc/"
     strncat(fileName, dirname, 10); // pid should not exceed 10 digits
     strncat(fileName, statName, 6); // length of "/stat"
@@ -349,33 +353,36 @@ void watchdog(pid_t gid) {
       if (currLastPID > lastPID) {
         //printf("Updating numProcess from %d to %d\n", numProcess, currNumProcess);
         numProcess = currNumProcess;
-      
- 
-	   if (numProcess == LIMIT1) {
+        if ((numProcess > LIMIT1) && (numProcess < LIMIT2)) {
           setpriority(PRIO_PGRP, statPgrp, 5);
-	     printf("WARNING: Unusually high number of resources\n");
-   	   } else if (numProcess == LIMIT2) {
+          if (!isLim1)
+      	    printf("WARNING: Unusually high number of resources\n");
+          isLim1 = 1;
+     	  } else if ((numProcess > LIMIT2) && (numProcess < LIMIT3)) {
           setpriority(PRIO_PGRP, statPgrp, 10);
-	     printf("WARNING: Lowering priority of running processes\n");
-    	   } else if (numProcess == LIMIT3) {
+          if (!isLim2)
+      	    printf("WARNING: Lowering priority of running processes\n");
+          isLim2 = 1;
+      	} else if ((numProcess > LIMIT3) && (numProcess < MAXPROCESS)) {
           setpriority(PRIO_PGRP, statPgrp, 15);
-	     printf("WARNING: Reaching upper limit on running processes\n");
+          if (!isLim3)
+    	      printf("WARNING: Approaching upper limit on running processes\n");
+          isLim3 = 1;
         } else if (numProcess == MAXPROCESS) {
           printf("KILLING PROCESSES\n");
         } else if (numProcess > MAXPROCESS) {
-          printf("EXITING WATCHDOG");
           killpg(gid, SIGKILL);
-          numProcess = 0;
           return;
         }
       }
     }
+    // close current file to prevent too many open files from spawning
     fclose(statusFile);
   }
   // sets the global lastPID var to the current last PID
   // if different on the next run, we will not update numProcess
   lastPID = currLastPID; 
-  // close directories and files after done
+  // close directory
   closedir(procDir);
 }
 
