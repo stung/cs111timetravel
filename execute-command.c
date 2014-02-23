@@ -356,7 +356,7 @@ void watchdog(pid_t gid) {
         if ((numProcess > LIMIT1) && (numProcess < LIMIT2)) {
           setpriority(PRIO_PGRP, statPgrp, 5);
           if (!isLim1)
-      	    printf("WARNING: Unusually high number of resources\n");
+      	    printf("WARNING: Utilizing an unusually high number of resources\n");
           isLim1 = 1;
      	  } else if ((numProcess > LIMIT2) && (numProcess < LIMIT3)) {
           setpriority(PRIO_PGRP, statPgrp, 10);
