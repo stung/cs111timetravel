@@ -92,11 +92,6 @@ gets out of control. \\
 Our implementation will seek to control the flow of the attack and ultimately
 kill the processes before they cause our kernel to crash.
 
-
-% To determine the atomic weight of magnesium via its reaction with oxygen and to study the stoichiometry of the reaction (as defined in \ref{definitions}):\\
-
-% \begin{center}\ce{2 Mg + O2 -> 2 MgO}\end{center}
-
 % % If you have more than one objective, uncomment the below:
 % %\begin{description}
 % %\item[First Objective] \hfill \\
@@ -121,13 +116,23 @@ kill the processes before they cause our kernel to crash.
 \section{Design Overview}
 
 To start, we define a maximum number of processes that our shell (which is 
-itself a process) can fork at any given time. This will be our hard upper 
-limit; upon reaching this limit, we will kill the shell and any processes that
-were forked from it to begin with. \\
-
-
-First, we aim to limit the maximum number of processes that our shell can fork at any given time.  If a process hits the limit, we will kill it if it continues to attempt to fork.
-Second, we want to ensure fairness in other programs by checking the number of children that a parent has forked using pstree.  When the number of processes exceed a certain limit, we will start increasing its nice factor to slowdown its forking.
+itself a process) can fork at any given time. This will be our \textbf{hard  
+limit}; upon reaching this limit, we will kill the shell and any processes that
+were forked from it to begin with. By checking the group process ID (GPID) of 
+our shell function, we will be able to count how many other processes have the 
+same GPID. We can also verify this through \textbf{pstree}, which creates a
+tree of processes that we can refer to when forking. \\
+We will also attempt to ensure fairness towards other running processes in the
+system by lowering the priority of our shell if it starts to generate a large
+number of forked processes. This will be our \textbf{soft limit}, as we will
+attempt to slow the forking process first when we reach this limit, rather 
+than kill it outright. We assume that when a process hits this limit, it is
+possible that it is not a malicious program, and that it just needs more forked
+processes than the norm. Therefore, we slow down the forking process to allow 
+more time for its previously forked processes to catch up and finish. In the
+event that it is indeed a malicious program (or a process that unintentionally 
+created an infinite forking loop), then we should take appropriate action when 
+we reach the hard limit and kill the process. \\
 
 % \begin{tabular}{ll}
 % Mass of empty crucible & \SI{7.28}{g}\\
@@ -196,16 +201,28 @@ We created a watchdog function that would run in the parent process, keeping
 track of the total number of processes and modifying the relative priority of
 
 \subsubsection{Counting processes}
+In this first part of our approach, we want to monitor the total number of
+processes on our shell. When we exceed our hard limit, 
 
 
 In the first part of our approach, we want to monitor the total number of the processes on the shell, and kill it if it exceeds the given maximum number of processes.
 We did this implementation in the function watchdog in execute-command.c.  To get the process forked from timetrash, we scan the processes in folder /proc and pass the information in the file to get the gid and pid from it.  Then, we can distinguish the processes with same gid as timetrash.  As the processes with same gid as timetrash increase, we update the number of process accordingly.  When it exceeds the given maximum number of processes, we will kill all the processes with same gid.  So that timetrash can not fork anymore processes, or it may occupy too much resources on the shell, which may let the shell crash. \\
 
 \subsubsection{Playing nice}
+As mentioned in the design overview, we also included soft limits in our design
+to slow down legitimate processes that may simply require several forked 
+processes.
+
 \subsubsection{Hitting the kill switch}
 
-\subsection{Environment}
-At first, we run our program on UCLA CS lion server.  However, as we tried to test our program and let it fork as much as it can, it will let the server out of usage.  After that, we change our environment to the cs111 distribution on virtual machine.  Even if we crash the shell, we just need to reboot it then everything is good again.  We won’t affect other users like what we did on the server. \\ 
+\subsection{Testing Environment}
+Though at first, we ran our program on the UCLA CS Lion server, we realized
+that it had the potential to affect other users who were running their own jobs
+on the server. To that end, we changed out environment to the CS111 virtual 
+machine distribution - if our shell or even our kernel crashed in the VM, it 
+would be a trivial matter to reboot our system and try again. Modifying our 
+test case such that it would not fork in an infinite loop was another viable
+solution, to prevent our kernel from crashing in the first place. \\
 
 %----------------------------------------------------------------------------------------
 %	SECTION 6
