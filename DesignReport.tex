@@ -178,6 +178,24 @@ we reach the hard limit and kill the process. \\
 %----------------------------------------------------------------------------------------
 
 \section{The Security Principles of Saltzer and Schroeder}
+We reached the following security principles: \\ 
+\subsection{Principle of Economy of Mechanism}
+We are simply limiting the total number of forked processes we can run
+concurrently to prevent them from overloading our resources.
+\subsection{Principle of Complete Mediation}
+We are checking all existing processes for every cycle that our child has not
+yet exited. While we cannot stop the process from forking, we can certainly
+kill it to prevent the process from forking after that point in time.
+\subsection{Principle of Least Privilege}
+In addition to killing the processes when the hard limit has been reached, we
+also lower the priority of the existing rogue processes to decrease the load on
+the kernel. We also do not escalate privileges in our implementation - the 
+shell is run with whatever permissions the user has.
+\subsection{Principle of Psychological Acceptability}
+As our implementation runs behind the scenes, there should be no discernable
+difference for the end user. Unless they run a program that specifically 
+requires a large number of forked processes, this will not inconvenience them 
+in the slightest. \\ 
 
 % \begin{tabular}{ll}
 % Mass of magnesium metal & = \SI{8.59}{g} - \SI{7.28}{g}\\
@@ -194,6 +212,19 @@ we reach the hard limit and kill the process. \\
 %----------------------------------------------------------------------------------------
 
 \section{Threat Model}
+This is a classic example of a Denial of Service (DoS) attack. An attacker 
+could exploit an unprepared program by feeding the shell a process that would
+fork in an infinite loop. Our shell will do its best to allocate more and more
+memory for every request each process makes. At best, this would cause his own 
+session to reach its allocated limit and crash his session. At worst, if run 
+with kernel permissions, it has the potential to use \textbf{all} available 
+memory and resources in the system, causing a system wide failure and crashing 
+all sessions on the machine. \\
+It becomes imperative for a shell to recognize when an input is going bad and
+stop it before it can cause too much damage. This means a designer must come up
+with a metric to measure how malicious an input is - in our case, the more
+processes a shell has forked, the higher the likelihood it is of being a
+malicious input. \\
 
 % The atomic weight of magnesium is concluded to be \SI{24}{g/mol}, as determined by the stoichiometry of its chemical combination with oxygen. This result is in agreement with the accepted value.
 
@@ -352,8 +383,8 @@ pstree -g
 As we were also modifying the priority of the extra forked processes, we used
 the \verb+time+ command to check the run time of our code. To test this, we
 would just prepend this command to all of the tests that we ran
-(\verb+time ./timetrash testDesign.sh+), and it would output something similar 
-to the following at the end of every run:
+(\verb+time ./timetrash testDesign.sh+), and it would output something in the 
+format of the following at the end of every run:
 \begin{lstlisting}
 real	0m0.030s
 user	0m0.003s
@@ -361,7 +392,8 @@ sys	0m0.020s
 \end{lstlisting}
 The idea is that without modifying the priority of the shell, we should see a
 shorter runtime than in the case where we do modify the priority of the shell.
-\\
+This would be due to our rogue processes yielding to higher priority processes,
+increasing the run-time of the program on the whole.\\
 
 % The accepted value (periodic table) is \SI{24.3}{g/mol} \cite{Smith:2012qr}. The percentage discrepancy between the accepted value and the result obtained here is 1.3\%. Because only a single measurement was made, it is not possible to calculate an estimated standard deviation. \\
 
